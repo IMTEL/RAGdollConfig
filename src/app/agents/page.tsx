@@ -1,6 +1,9 @@
+"use client";
 import { Bot, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AgentModal } from "@/components/ui/modal";
+import { useState } from "react";
 
 interface Agent {
   id: number;
@@ -45,7 +48,7 @@ function AgentCard({ agent }: AgentCardProps) {
 
 export default function AgentsPage() {
   // Mock data for demonstration
-  const agents: Agent[] = [
+  const [agents, setAgents] = useState<Agent[]>([
     {
       id: 1,
       name: "Customer Support Agent",
@@ -67,7 +70,9 @@ export default function AgentsPage() {
       status: "active",
       lastUpdated: "30 minutes ago",
     },
-  ];
+  ]);
+
+  const [modalOpen, setModalOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -78,12 +83,32 @@ export default function AgentsPage() {
             Manage your AI agents and their configurations
           </p>
         </div>
-        <Button>
+        <Button 
+          onClick={() => setModalOpen(true)} 
+          className="cursor-pointer"
+        >
           <Plus className="mr-2 h-4 w-4" />
           Create Agent
         </Button>
       </div>
-
+      <AgentModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreate={(agent) => {
+          // TODO: Save new agent to backend
+          setAgents([
+            ...agents,
+            {
+              id: agents.length + 1,
+              name: agent.name,
+              description: agent.description,
+              status: "active",
+              lastUpdated: "just now",
+            },
+          ]);
+          setModalOpen(false);
+        }}
+      />
       <div className="grid gap-4">
         {agents.map((agent) => (
           <AgentCard key={agent.id} agent={agent} />
