@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AgentModal } from "@/components/ui/modal";
 import { useState } from "react";
+import Link from "next/link";
 
 interface Agent {
   id: number;
@@ -34,15 +35,11 @@ function AgentCard({ agent }: AgentCardProps) {
           <p className="text-muted-foreground">{agent.description}</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              window.location.href = `configure-agent?agentId=${agent.id}`;
-            }}
-          >
-            Configure
-          </Button>
+          <Link href={`/agents/${agent.id}`}>
+            <Button variant="outline" size="sm">
+              Configure
+            </Button>
+          </Link>
         </div>
       </div>
       <div className="text-sm text-muted-foreground">
