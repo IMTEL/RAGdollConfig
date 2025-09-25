@@ -34,7 +34,13 @@ function AgentCard({ agent }: AgentCardProps) {
           <p className="text-muted-foreground">{agent.description}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              window.location.href = `configure-agent?agentId=${agent.id}`;
+            }}
+          >
             Configure
           </Button>
         </div>

@@ -6,17 +6,17 @@ import { cn } from "@/lib/utils";
 export function AgentModal({ open, onClose, onCreate }: {
   open: boolean;
   onClose: () => void;
-  onCreate: (agent: { icon: string; name: string; description: string; prompt: string }) => void;
+  onCreate: (agent: { icon: string; name: string; description: string }) => void;
 }) {
   const [icon, setIcon] = React.useState("");
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [prompt, setPrompt] = React.useState("");
+  // const [prompt, setPrompt] = React.useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onCreate({ icon, name, description, prompt });
-    setIcon(""); setName(""); setDescription(""); setPrompt("");
+    onCreate({ icon, name, description });
+    setIcon(""); setName(""); setDescription("");
     onClose();
   }
 
@@ -49,13 +49,13 @@ export function AgentModal({ open, onClose, onCreate }: {
             onChange={e => setDescription(e.target.value)}
             required
           />
-          <Input
+          {/* <Input
             type="text"
             placeholder="Prompt"
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             required
-          />
+          /> */}
           <div className={cn("flex justify-end gap-2")}>
             <button
               type="button"

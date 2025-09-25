@@ -2,7 +2,8 @@
 import { AgentBasePrompt } from "@/components/agent-configuration/agent-base-prompt";
 import { LLM, SelectModel } from "@/components/agent-configuration/select-model";
 import { Separator } from "@/components/ui/separator"
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 
 
@@ -16,6 +17,15 @@ export default function ConfigureAgent() {
     console.log("changing model")
     setModel(model)
   }
+
+  const searchParams = useSearchParams();
+  const [agentId, setAgentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = searchParams.get("agentId");
+    setAgentId(id);
+    // TODO: fetch existing agent config by id and populate model/basePrompt
+  }, [searchParams]);
 
   const onBasePromptChanged = (promt: string) => {
 
@@ -51,6 +61,10 @@ export default function ConfigureAgent() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Configure agent</h1>
         </div>
+      </div>
+
+      <div className="text-sm text-muted-foreground">
+        Configuring agent with ID: {agentId}
       </div>
 
       <Separator />
