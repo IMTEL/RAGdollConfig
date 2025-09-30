@@ -23,10 +23,9 @@ export function AgentBasePrompt({ prompt, onChange, maxLength }: AgentBasePropmt
     }
 
     return (
-
         <Accordion type="single" collapsible>
             <AccordionItem value="item-1">
-                <AccordionTrigger>Edit Base Prompt</AccordionTrigger>
+                <AccordionTrigger>Edit System Prompt</AccordionTrigger>
                 <AccordionContent>
                     <Textarea
                         placeholder="Write the agents base prompt here"
