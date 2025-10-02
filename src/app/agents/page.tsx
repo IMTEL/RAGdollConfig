@@ -5,14 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { AgentModal } from "@/components/ui/modal";
 import { useState } from "react";
 import Link from "next/link";
-
-interface Agent {
-  id: number;
-  name: string;
-  description: string;
-  status: "active" | "inactive";
-  lastUpdated: string;
-}
+import { useQuery, useMutation} from "@tanstack/react-query";
+import { agentsClient, Agent } from "@/api/agentsClient";
 
 interface AgentCardProps {
   agent: Agent;
@@ -50,32 +44,12 @@ function AgentCard({ agent }: AgentCardProps) {
 }
 
 export default function AgentsPage() {
-  // Mock data for demonstration
-  const [agents, setAgents] = useState<Agent[]>([
-    {
-      id: 1,
-      name: "Customer Support Agent",
-      description: "Handles customer inquiries and support requests",
-      status: "active",
-      lastUpdated: "2 hours ago",
-    },
-    {
-      id: 2,
-      name: "Sales Assistant",
-      description: "Assists with sales inquiries and product information",
-      status: "inactive",
-      lastUpdated: "1 day ago",
-    },
-    {
-      id: 3,
-      name: "Technical Documentation Bot",
-      description: "Helps users find technical documentation and guides",
-      status: "active",
-      lastUpdated: "30 minutes ago",
-    },
-  ]);
-
   const [modalOpen, setModalOpen] = useState(false);
+  // Fetch agents from the backend
+  const { data: agents = [], isLoading, error } = useQuery<Agent[]>({
+    queryKey: ["agents"],
+    queryFn: agentsClient.getAll,
+  });
 
   return (
     <div className="space-y-6">
@@ -99,19 +73,12 @@ export default function AgentsPage() {
         onClose={() => setModalOpen(false)}
         onCreate={(agent) => {
           // TODO: Save new agent to backend
-          setAgents([
-            ...agents,
-            {
-              id: agents.length + 1,
-              name: agent.name,
-              description: agent.description,
-              status: "active",
-              lastUpdated: "just now",
-            },
-          ]);
-          setModalOpen(false);
+          // Use usemutation
         }}
       />
+      {isLoading && <p>Loading agents...</p>}
+      {error && <p className="text-red-500">Failed to load agents</p>}
+
       <div className="grid gap-4">
         {agents.map((agent) => (
           <AgentCard key={agent.id} agent={agent} />

@@ -15,34 +15,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { use } from "react";
+import{Agent} from "@/api/agentsClient";
 import { LLM, SelectModel } from "@/components/agent-configuration/select-model";
 import { AgentBasePrompt } from "@/components/agent-configuration/agent-base-prompt";
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  systemPrompt: string;
-  temperature: number;
-  maxTokens: number;
-  model: LLM | null;
-  status: "active" | "inactive";
-  enableMemory: boolean;
-  enableWebSearch: boolean;
-  responseFormat: "text" | "structured";
-  connectedCorpuses: string[];
-}
 
 interface Corpus {
   id: string;
@@ -65,16 +44,25 @@ export default function AgentEditPage({
     id: id,
     name: "Customer Support Agent",
     description: "Handles customer inquiries and support requests",
-    systemPrompt:
+    prompt:
       "You are a helpful customer support agent. Always be polite and professional. If you don't know something, offer to escalate to a human agent.",
-    temperature: 0.7,
-    maxTokens: 1000,
-    model: null,
+    corpa: [],  
+    roles: [],
+    llm_model: "Idun",
+    llm_temperature: 0.7,
+    llm_max_tokens: 1000,
+    llm_api_key: "",
+    access_key: [],
+    retrieval_method: "",
+    embedding_model: "",
     status: "active",
-    enableMemory: true,
-    enableWebSearch: false,
-    responseFormat: "text",
-    connectedCorpuses: ["corpus-1", "corpus-3"],
+    response_format: "text",
+    // enableMemory: true,
+    // enableWebSearch: false,
+    connectedCorpuses: [], // DEPRECATED
+    enableMemory: true, // DEPRECATED
+    enableWebSearch: false, // DEPRECATED
+    model: null, // DEPRECATED
   });
 
   // Mock available corpuses
@@ -226,8 +214,8 @@ export default function AgentEditPage({
               <div className="grid gap-2">
                 <Label htmlFor="system-prompt">System Prompt</Label>
                 <AgentBasePrompt
-                prompt={agent.systemPrompt}
-                onChange={(prompt) => {handleInputChange("systemPrompt",prompt)} }
+                prompt={agent.prompt}
+                onChange={(prompt) => {handleInputChange("prompt",prompt)} }
                 maxLength={1000}
                 />
               </div>  
@@ -362,7 +350,7 @@ export default function AgentEditPage({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="temperature">
-                  Temperature: {agent.temperature}
+                  Temperature: {agent.llm_temperature}
                 </Label>
                 <input
                   id="temperature"
@@ -370,9 +358,9 @@ export default function AgentEditPage({
                   min="0"
                   max="2"
                   step="0.1"
-                  value={agent.temperature}
+                  value={agent.llm_temperature}
                   onChange={(e) =>
-                    handleInputChange("temperature", parseFloat(e.target.value))
+                    handleInputChange("llm_temperature", parseFloat(e.target.value))
                   }
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                 />
@@ -386,9 +374,9 @@ export default function AgentEditPage({
                 <Input
                   id="max-tokens"
                   type="number"
-                  value={agent.maxTokens}
+                  value={agent.llm_max_tokens}
                   onChange={(e) =>
-                    handleInputChange("maxTokens", parseInt(e.target.value))
+                    handleInputChange("llm_max_tokens", parseInt(e.target.value))
                   }
                   placeholder="Maximum response length"
                   min="1"
