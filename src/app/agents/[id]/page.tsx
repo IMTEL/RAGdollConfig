@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bot, Save, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,10 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { use } from "react";
-import { LLM, SelectModel } from "@/components/agent-configuration/select-model";
+import {
+  LLM,
+  SelectModel,
+} from "@/components/agent-configuration/select-model";
 import { AgentBasePrompt } from "@/components/agent-configuration/agent-base-prompt";
 
 interface Agent {
@@ -77,6 +80,8 @@ export default function AgentEditPage({
     connectedCorpuses: ["corpus-1", "corpus-3"],
   });
 
+
+
   // Mock available corpuses
   const availableCorpuses: Corpus[] = [
     {
@@ -108,28 +113,6 @@ export default function AgentEditPage({
       status: "synced",
     },
   ];
-
-  const models: LLM[] =
-  [
-    {
-      id: 1,
-      name: "Idun",
-      description: "Sheesh",
-      GDPRCompliant: true,
-    },
-    {
-      id: 2,
-      name: "ChatGPT5",
-      description: "Sheesh",
-      GDPRCompliant: false,
-    },
-    {
-      id: 3,
-      name: "DeepSeek",
-      description: "Sheesh",
-      GDPRCompliant: false,
-    },
-  ]
 
   const handleInputChange = (
     field: keyof Agent,
@@ -226,11 +209,13 @@ export default function AgentEditPage({
               <div className="grid gap-2">
                 <Label htmlFor="system-prompt">System Prompt</Label>
                 <AgentBasePrompt
-                prompt={agent.systemPrompt}
-                onChange={(prompt) => {handleInputChange("systemPrompt",prompt)} }
-                maxLength={1000}
+                  prompt={agent.systemPrompt}
+                  onChange={(prompt) => {
+                    handleInputChange("systemPrompt", prompt);
+                  }}
+                  maxLength={1000}
                 />
-              </div>  
+              </div>
             </CardContent>
           </Card>
 
@@ -256,7 +241,7 @@ export default function AgentEditPage({
                       <Checkbox
                         id={corpus.id}
                         checked={isConnected}
-                        onCheckedChange={(checked : any) =>
+                        onCheckedChange={(checked: any) =>
                           handleCorpusConnection(corpus.id, checked as boolean)
                         }
                       />
@@ -304,7 +289,7 @@ export default function AgentEditPage({
                 <Switch
                   id="status"
                   checked={agent.status === "active"}
-                  onCheckedChange={(checked : any) =>
+                  onCheckedChange={(checked: any) =>
                     handleInputChange("status", checked ? "active" : "inactive")
                   }
                 />
@@ -320,7 +305,7 @@ export default function AgentEditPage({
                 <Switch
                   id="memory"
                   checked={agent.enableMemory}
-                  onCheckedChange={(checked : any) =>
+                  onCheckedChange={(checked: any) =>
                     handleInputChange("enableMemory", checked)
                   }
                 />
@@ -335,7 +320,7 @@ export default function AgentEditPage({
                 <Switch
                   id="web-search"
                   checked={agent.enableWebSearch}
-                  onCheckedChange={(checked : any) =>
+                  onCheckedChange={(checked: any) =>
                     handleInputChange("enableWebSearch", checked)
                   }
                 />
@@ -355,9 +340,10 @@ export default function AgentEditPage({
               <div className="grid gap-2">
                 <Label htmlFor="model">Model</Label>
                 <SelectModel
-                models={models}
-                selectedModel={agent.model}
-                onChange={ (model) => {handleInputChange("model",model)}}
+                  selectedModel={agent.model}
+                  onChange={(model) => {
+                    handleInputChange("model", model);
+                  }}
                 />
               </div>
               <div className="grid gap-2">
