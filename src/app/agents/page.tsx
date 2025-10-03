@@ -37,7 +37,7 @@ function AgentCard({ agent }: AgentCardProps) {
         </div>
       </div>
       <div className="text-sm text-muted-foreground">
-        Last updated {agent.lastUpdated}
+        Last updated {agent.last_updated}
       </div>
     </div>
   );

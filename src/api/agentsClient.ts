@@ -18,7 +18,7 @@ export interface Agent {
   embedding_model?: string; // optional for now
   status?: "active" | "inactive";
   response_format: "text" | "structured";
-  lastUpdated?: string; // optional for tracking updates
+  last_updated?: string; // optional for tracking updates
   connectedCorpuses: string[]; // DEPRECATED
   enableMemory: boolean; // DEPRECATED
   enableWebSearch: boolean; // DEPRECATED
