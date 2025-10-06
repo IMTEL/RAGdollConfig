@@ -52,7 +52,7 @@ interface Corpus {
   status: "synced" | "outdated";
 }
 
-export default function AgentEditPage({
+export default function AgentConfigurationPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -161,6 +161,28 @@ export default function AgentEditPage({
     alert("Agent configuration saved! (This is placeholder functionality)");
   };
 
+  const handleTestAgent = () => {
+    // Log the attempt
+    console.log('Testing agent:', agent.name, 'with ID:', agent.id);
+
+    try {
+      const params = new URLSearchParams({
+        agent: agent.id.toString(),
+        name: agent.name
+      });
+      
+     // const chatUrl = `/chat?${params.toString()}`;
+     const chatUrl = `http://localhost:3000?agent=${agent.id}`;
+
+      console.log('Opening chat URL:', chatUrl);
+      window.open(chatUrl, '_blank');
+    } catch (error) {
+      console.error('Error launching chat:', error);
+      // You might want to show an error message to the user
+      alert('Failed to launch chat interface. Please try again.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -179,7 +201,7 @@ export default function AgentEditPage({
         <div className="ml-auto flex gap-2">
           <Button
             variant="outline"
-            onClick={() => alert("Test Agent functionality coming soon!")}
+            onClick={handleTestAgent}
           >
             <Bot className="mr-2 h-4 w-4" />
             Test Agent
