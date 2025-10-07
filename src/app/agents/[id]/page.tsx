@@ -10,7 +10,6 @@ import {
   FileText,
   Trash2,
   Calendar,
-  Theater,
   Drama,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +35,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { use } from "react";
+import {
+  SelectModel,
+  LLM,
+} from "@/components/agent-configuration/select-model";
 
 interface Document {
   id: string;
@@ -115,7 +118,7 @@ export default function AgentEditPage({
 
   const handleInputChange = (
     field: keyof Agent,
-    value: string | number | boolean | LLM | null
+    value: string | number | boolean | null
   ) => {
     setAgent((prev) => ({ ...prev, [field]: value }));
   };
@@ -183,6 +186,27 @@ export default function AgentEditPage({
     // Temporary alert for demonstration
     alert("Agent configuration saved! (This is placeholder functionality)");
   };
+
+  const models: LLM[] = [
+    {
+      id: 1,
+      name: "Idun",
+      description: "Sheesh",
+      GDPRCompliant: true,
+    },
+    {
+      id: 2,
+      name: "ChatGPT5",
+      description: "Sheesh",
+      GDPRCompliant: false,
+    },
+    {
+      id: 3,
+      name: "DeepSeek",
+      description: "Sheesh",
+      GDPRCompliant: false,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -480,27 +504,11 @@ export default function AgentEditPage({
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
                   <Label htmlFor="model">Model</Label>
-                  <Select
-                    value={agent.model}
-                    onValueChange={(value) => handleInputChange("model", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gpt-4">GPT-4</SelectItem>
-                      <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                      <SelectItem value="gpt-3.5-turbo">
-                        GPT-3.5 Turbo
-                      </SelectItem>
-                      <SelectItem value="claude-3-sonnet">
-                        Claude 3 Sonnet
-                      </SelectItem>
-                      <SelectItem value="claude-3-haiku">
-                        Claude 3 Haiku
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SelectModel
+                    models={models}
+                    selectedModel={agent.model}
+                    onChange={(model) => setAgent({ ...agent, model })}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="temperature">
