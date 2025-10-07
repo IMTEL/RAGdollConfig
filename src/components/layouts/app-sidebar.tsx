@@ -39,11 +39,6 @@ const navigationItems = [
     icon: Bot,
   },
   {
-    title: "Corpuses",
-    url: "/corpuses",
-    icon: Database,
-  },
-  {
     title: "API Keys",
     url: "/api-keys",
     icon: Key,
