@@ -32,30 +32,9 @@ import {
   SelectModel,
   LLM,
 } from "@/components/agent-configuration/select-model";
-
-interface Document {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploadDate: string;
-  status: "processing" | "ready" | "error";
-}
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  systemPrompt: string;
-  temperature: number;
-  maxTokens: number;
-  model: LLM | null;
-  status: "active" | "inactive";
-  enableMemory: boolean;
-  enableWebSearch: boolean;
-  responseFormat: "text" | "structured";
-  documents: Document[];
-}
+import {Agent} from "@/api/agentsClient";
+import {Context} from "@/api/contextClient";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AgentEditPage({
   params,
@@ -72,20 +51,7 @@ export default function AgentEditPage({
     description: "Handles customer inquiries and support requests",
     prompt:
       "You are a helpful customer support agent. Always be polite and professional. If you don't know something, offer to escalate to a human agent.",
-    corpa: [],  
-    roles: [],
-    llm_model: "Idun",
-    llm_temperature: 0.7,
-    llm_max_tokens: 1000,
-    llm_api_key: "",
-    access_key: [],
-    retrieval_method: "",
-    embedding_model: "",
-    status: "active",
-    enableMemory: true,
-    enableWebSearch: false,
-    responseFormat: "text",
-    documents: [
+    corpa: [
       {
         id: "doc-1",
         name: "Customer Support FAQ.pdf",
@@ -110,7 +76,25 @@ export default function AgentEditPage({
         uploadDate: "2024-01-13",
         status: "processing",
       },
-    ],
+    ],  
+    roles: [],
+    llm_model: {
+        id: 1,
+        name: "Idun",
+        description: "Sheesh",
+        GDPRCompliant: true
+      },
+    llm_temperature: 0.7,
+    llm_max_tokens: 1000,
+    llm_api_key: "",
+    access_key: [],
+    retrieval_method: "",
+    embedding_model: "",
+    status: "active",
+    response_format: "text",
+    enableMemory: true,
+    enableWebSearch: false,
+    last_updated: "2 hrs ago",
   });
 
   const [dragActive, setDragActive] = useState(false);
@@ -123,7 +107,7 @@ export default function AgentEditPage({
   };
 
   const handleFileUpload = useCallback((files: FileList) => {
-    const newDocuments: Document[] = Array.from(files).map((file, index) => ({
+    const newContexts: Context[] = Array.from(files).map((file, index) => ({
       id: `doc-${Date.now()}-${index}`,
       name: file.name,
       type: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
@@ -134,15 +118,15 @@ export default function AgentEditPage({
 
     setAgent((prev) => ({
       ...prev,
-      documents: [...prev.documents, ...newDocuments],
+      corpa: [...prev.corpa, ...newContexts],
     }));
 
     // Simulate processing
     setTimeout(() => {
       setAgent((prev) => ({
         ...prev,
-        documents: prev.documents.map((doc) =>
-          newDocuments.some((newDoc) => newDoc.id === doc.id)
+        corpa: prev.corpa.map((doc) =>
+          newContexts.some((newDoc) => newDoc.id === doc.id)
             ? { ...doc, status: "ready" as const }
             : doc
         ),
@@ -153,7 +137,7 @@ export default function AgentEditPage({
   const handleDocumentDelete = (documentId: string) => {
     setAgent((prev) => ({
       ...prev,
-      documents: prev.documents.filter((doc) => doc.id !== documentId),
+      corpa: prev.corpa.filter((doc) => doc.id !== documentId),
     }));
   };
 
@@ -293,9 +277,9 @@ export default function AgentEditPage({
                   <Label htmlFor="system-prompt">System Prompt</Label>
                   <Textarea
                     id="system-prompt"
-                    value={agent.systemPrompt}
+                    value={agent.prompt}
                     onChange={(e) =>
-                      handleInputChange("systemPrompt", e.target.value)
+                      handleInputChange("prompt", e.target.value)
                     }
                     placeholder="Define the agent's personality and behavior"
                     rows={8}
@@ -420,10 +404,10 @@ export default function AgentEditPage({
                 </div>
 
                 {/* Documents Table */}
-                {agent.documents.length > 0 && (
+                {agent.corpa.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium">
-                      Uploaded Documents ({agent.documents.length})
+                      Uploaded Documents ({agent.corpa.length})
                     </h4>
                     <div className="border rounded-lg">
                       <div className="grid grid-cols-5 gap-4 p-3 border-b bg-muted/50 text-sm font-medium">
@@ -433,7 +417,7 @@ export default function AgentEditPage({
                         <div>Upload Date</div>
                         <div>Actions</div>
                       </div>
-                      {agent.documents.map((document) => (
+                      {agent.corpa.map((document) => (
                         <div
                           key={document.id}
                           className="grid grid-cols-5 gap-4 p-3 border-b last:border-b-0 items-center"
@@ -505,13 +489,13 @@ export default function AgentEditPage({
                   <Label htmlFor="model">Model</Label>
                   <SelectModel
                     models={models}
-                    selectedModel={agent.model}
-                    onChange={(model) => setAgent({ ...agent, model })}
+                    selectedModel={agent.llm_model}
+                    onChange={(model) => setAgent({ ...agent, llm_model: model })}
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="temperature">
-                    Temperature: {agent.temperature}
+                    Temperature: {agent.llm_temperature}
                   </Label>
                   <input
                     id="temperature"
@@ -519,10 +503,10 @@ export default function AgentEditPage({
                     min="0"
                     max="2"
                     step="0.1"
-                    value={agent.temperature}
+                    value={agent.llm_temperature}
                     onChange={(e) =>
                       handleInputChange(
-                        "temperature",
+                        "llm_temperature",
                         parseFloat(e.target.value)
                       )
                     }
@@ -538,9 +522,9 @@ export default function AgentEditPage({
                   <Input
                     id="max-tokens"
                     type="number"
-                    value={agent.maxTokens}
+                    value={agent.llm_max_tokens}
                     onChange={(e) =>
-                      handleInputChange("maxTokens", parseInt(e.target.value))
+                      handleInputChange("llm_max_tokens", parseInt(e.target.value))
                     }
                     placeholder="Maximum response length"
                     min="1"
@@ -550,9 +534,9 @@ export default function AgentEditPage({
                 <div className="grid gap-2">
                   <Label htmlFor="response-format">Response Format</Label>
                   <Select
-                    value={agent.responseFormat}
+                    value={agent.response_format}
                     onValueChange={(value) =>
-                      handleInputChange("responseFormat", value)
+                      handleInputChange("response_format", value)
                     }
                   >
                     <SelectTrigger>

@@ -1,4 +1,5 @@
 import { LLM } from "@/components/agent-configuration/select-model";
+import { Context } from "@/api/contextClient";
 
 const backend_api_url = process.env.BACKEND_API_URL|| "http://localhost:8000";
 
@@ -7,9 +8,9 @@ export interface Agent {
   name: string;
   description: string;
   prompt: string;
-  corpa: string[];
+  corpa: Context[];
   roles: Role[];
-  llm_model: string;
+  llm_model: LLM | null; // TODO: Change to LLM model
   llm_temperature: number;
   llm_max_tokens: number;
   llm_api_key: string;
@@ -18,14 +19,10 @@ export interface Agent {
   embedding_model?: string; // optional for now
   status?: "active" | "inactive";
   response_format: "text" | "structured";
-  last_updated?: string; // optional for tracking updates
-  connectedCorpuses: string[]; // DEPRECATED
   enableMemory: boolean; // DEPRECATED
-  enableWebSearch: boolean; // DEPRECATED
-  model: LLM | null; // DEPRECATED, use llm_model instead but didn't want to break existing frontend
+  enableWebSearch: boolean; // 
+  last_updated?: string;
 }
-
-
  
 export interface Role {
   id: string;

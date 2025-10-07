@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useQuery, useMutation} from "@tanstack/react-query";
 import { agentsClient, Agent } from "@/api/agentsClient";
 
+
 interface AgentCardProps {
   agent: Agent;
 }
