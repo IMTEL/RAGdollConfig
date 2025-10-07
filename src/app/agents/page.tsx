@@ -57,7 +57,7 @@ export default function AgentsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Agents</h1>
           <p className="text-muted-foreground">
-            Manage your AI agents and their configurations
+            Manage and configure your AI agents
           </p>
         </div>
         <Button 
@@ -65,7 +65,7 @@ export default function AgentsPage() {
           className="cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Create Agent
+          Create New Agent
         </Button>
       </div>
       <AgentModal

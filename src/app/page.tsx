@@ -12,14 +12,6 @@ export default function Home() {
       color: "text-blue-500",
     },
     {
-      title: "Corpuses",
-      description:
-        "Organize and manage your knowledge bases and document collections",
-      icon: Database,
-      href: "/corpuses",
-      color: "text-green-500",
-    },
-    {
       title: "API Keys",
       description:
         "Generate and manage API keys for secure access to your resources",

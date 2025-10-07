@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot, Save, Database } from "lucide-react";
+import {
+  ArrowLeft,
+  Bot,
+  Save,
+  Upload,
+  FileText,
+  Trash2,
+  Calendar,
+  Drama,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,19 +25,36 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { use } from "react";
-import{Agent} from "@/api/agentsClient";
-import { LLM, SelectModel } from "@/components/agent-configuration/select-model";
-import { AgentBasePrompt } from "@/components/agent-configuration/agent-base-prompt";
+import {
+  SelectModel,
+  LLM,
+} from "@/components/agent-configuration/select-model";
 
-interface Corpus {
+interface Document {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  uploadDate: string;
+  status: "processing" | "ready" | "error";
+}
+
+interface Agent {
   id: string;
   name: string;
   description: string;
-  documents: number;
-  status: "synced" | "outdated";
+  systemPrompt: string;
+  temperature: number;
+  maxTokens: number;
+  model: LLM | null;
+  status: "active" | "inactive";
+  enableMemory: boolean;
+  enableWebSearch: boolean;
+  responseFormat: "text" | "structured";
+  documents: Document[];
 }
 
 export default function AgentEditPage({
@@ -56,49 +82,111 @@ export default function AgentEditPage({
     retrieval_method: "",
     embedding_model: "",
     status: "active",
-    response_format: "text",
-    // enableMemory: true,
-    // enableWebSearch: false,
-    connectedCorpuses: [], // DEPRECATED
-    enableMemory: true, // DEPRECATED
-    enableWebSearch: false, // DEPRECATED
-    model: null, // DEPRECATED
+    enableMemory: true,
+    enableWebSearch: false,
+    responseFormat: "text",
+    documents: [
+      {
+        id: "doc-1",
+        name: "Customer Support FAQ.pdf",
+        type: "PDF",
+        size: "2.3 MB",
+        uploadDate: "2024-01-15",
+        status: "ready",
+      },
+      {
+        id: "doc-2",
+        name: "Product Guidelines.docx",
+        type: "DOCX",
+        size: "1.8 MB",
+        uploadDate: "2024-01-14",
+        status: "ready",
+      },
+      {
+        id: "doc-3",
+        name: "Company Policies.txt",
+        type: "TXT",
+        size: "0.5 MB",
+        uploadDate: "2024-01-13",
+        status: "processing",
+      },
+    ],
   });
 
-  // Mock available corpuses
-  const availableCorpuses: Corpus[] = [
-    {
-      id: "corpus-1",
-      name: "Customer Support KB",
-      description: "Customer support knowledge base and FAQs",
-      documents: 150,
-      status: "synced",
-    },
-    {
-      id: "corpus-2",
-      name: "Product Documentation",
-      description: "Technical product documentation and guides",
-      documents: 89,
-      status: "synced",
-    },
-    {
-      id: "corpus-3",
-      name: "Company Policies",
-      description: "Internal company policies and procedures",
-      documents: 45,
-      status: "outdated",
-    },
-    {
-      id: "corpus-4",
-      name: "Training Materials",
-      description: "Employee training materials and resources",
-      documents: 120,
-      status: "synced",
-    },
-  ];
+  const [dragActive, setDragActive] = useState(false);
 
-  const models: LLM[] =
-  [
+  const handleInputChange = (
+    field: keyof Agent,
+    value: string | number | boolean | null
+  ) => {
+    setAgent((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleFileUpload = useCallback((files: FileList) => {
+    const newDocuments: Document[] = Array.from(files).map((file, index) => ({
+      id: `doc-${Date.now()}-${index}`,
+      name: file.name,
+      type: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
+      size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      uploadDate: new Date().toISOString().split("T")[0],
+      status: "processing" as const,
+    }));
+
+    setAgent((prev) => ({
+      ...prev,
+      documents: [...prev.documents, ...newDocuments],
+    }));
+
+    // Simulate processing
+    setTimeout(() => {
+      setAgent((prev) => ({
+        ...prev,
+        documents: prev.documents.map((doc) =>
+          newDocuments.some((newDoc) => newDoc.id === doc.id)
+            ? { ...doc, status: "ready" as const }
+            : doc
+        ),
+      }));
+    }, 2000);
+  }, []);
+
+  const handleDocumentDelete = (documentId: string) => {
+    setAgent((prev) => ({
+      ...prev,
+      documents: prev.documents.filter((doc) => doc.id !== documentId),
+    }));
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragActive(false);
+      const files = e.dataTransfer.files;
+      if (files?.length) {
+        handleFileUpload(files);
+      }
+    },
+    [handleFileUpload]
+  );
+
+  const handleSave = () => {
+    // TODO: Implement save functionality
+    console.log("Saving agent:", agent);
+    // Temporary alert for demonstration
+    alert("Agent configuration saved! (This is placeholder functionality)");
+  };
+
+  const models: LLM[] = [
     {
       id: 1,
       name: "Idun",
@@ -117,37 +205,7 @@ export default function AgentEditPage({
       description: "Sheesh",
       GDPRCompliant: false,
     },
-  ]
-
-  const handleInputChange = (
-    field: keyof Agent,
-    value: string | number | boolean | LLM | null
-  ) => {
-    setAgent((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleCorpusConnection = (corpusId: string, connected: boolean) => {
-    if (connected) {
-      setAgent((prev) => ({
-        ...prev,
-        connectedCorpuses: [...prev.connectedCorpuses, corpusId],
-      }));
-    } else {
-      setAgent((prev) => ({
-        ...prev,
-        connectedCorpuses: prev.connectedCorpuses.filter(
-          (id) => id !== corpusId
-        ),
-      }));
-    }
-  };
-
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log("Saving agent:", agent);
-    // Temporary alert for demonstration
-    alert("Agent configuration saved! (This is placeholder functionality)");
-  };
+  ];
 
   return (
     <div className="space-y-6">
@@ -179,214 +237,338 @@ export default function AgentEditPage({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Basic Information */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>
-                Configure the basic settings for your agent
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Agent Name</Label>
-                <Input
-                  id="name"
-                  value={agent.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="Enter agent name"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={agent.description}
-                  onChange={(e) =>
-                    handleInputChange("description", e.target.value)
-                  }
-                  placeholder="Describe what this agent does"
-                  rows={3}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="system-prompt">System Prompt</Label>
-                <AgentBasePrompt
-                prompt={agent.prompt}
-                onChange={(prompt) => {handleInputChange("prompt",prompt)} }
-                maxLength={1000}
-                />
-              </div>  
-            </CardContent>
-          </Card>
+      {/* Tabs */}
+      <Tabs defaultValue="description" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="description" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Description
+          </TabsTrigger>
+          <TabsTrigger value="corpus" className="flex items-center gap-2">
+            <Upload className="w-4 h-4" />
+            Corpus
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="flex items-center gap-2">
+            <Drama className="w-4 h-4" />
+            Roles
+          </TabsTrigger>
+          <TabsTrigger value="model" className="flex items-center gap-2">
+            <Bot className="w-4 h-4" />
+            Model
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Connected Corpuses */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Connected Knowledge Bases</CardTitle>
-              <CardDescription>
-                Select which corpuses this agent can access for information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {availableCorpuses.map((corpus) => {
-                  const isConnected = agent.connectedCorpuses.includes(
-                    corpus.id
-                  );
-                  return (
-                    <div
-                      key={corpus.id}
-                      className="flex items-center space-x-3 p-3 border rounded-lg"
-                    >
-                      <Checkbox
-                        id={corpus.id}
-                        checked={isConnected}
-                        onCheckedChange={(checked : any) =>
-                          handleCorpusConnection(corpus.id, checked as boolean)
+        <TabsContent value="description">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+                <CardDescription>
+                  Configure the basic settings for your agent
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Agent Name</Label>
+                  <Input
+                    id="name"
+                    value={agent.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    placeholder="Enter agent name"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={agent.description}
+                    onChange={(e) =>
+                      handleInputChange("description", e.target.value)
+                    }
+                    placeholder="Describe what this agent does"
+                    rows={3}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="system-prompt">System Prompt</Label>
+                  <Textarea
+                    id="system-prompt"
+                    value={agent.systemPrompt}
+                    onChange={(e) =>
+                      handleInputChange("systemPrompt", e.target.value)
+                    }
+                    placeholder="Define the agent's personality and behavior"
+                    rows={8}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Agent Status</CardTitle>
+                <CardDescription>
+                  Control the agent&apos;s availability and features
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="status">Active</Label>
+                  <Switch
+                    id="status"
+                    checked={agent.status === "active"}
+                    onCheckedChange={(checked) =>
+                      handleInputChange(
+                        "status",
+                        checked ? "active" : "inactive"
+                      )
+                    }
+                  />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="memory">Reference</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Reference material in the corpus
+                    </p>
+                  </div>
+                  <Switch
+                    id="memory"
+                    checked={agent.enableMemory}
+                    onCheckedChange={(checked) =>
+                      handleInputChange("enableMemory", checked)
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="web-search">Web Search</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Search the web for information
+                    </p>
+                  </div>
+                  <Switch
+                    id="web-search"
+                    checked={agent.enableWebSearch}
+                    onCheckedChange={(checked) =>
+                      handleInputChange("enableWebSearch", checked)
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="corpus">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Knowledge Base Documents</CardTitle>
+                <CardDescription>
+                  Upload and manage documents for this agent&apos;s knowledge
+                  base
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Upload Area */}
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    dragActive
+                      ? "border-primary bg-primary/5"
+                      : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <div className="space-y-2">
+                    <p className="text-lg font-medium">
+                      Drag and drop files here
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      or click to browse files
+                    </p>
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      id="file-upload"
+                      onChange={(e) => {
+                        if (e.target.files?.length) {
+                          handleFileUpload(e.target.files);
                         }
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <Database className="h-4 w-4 text-muted-foreground" />
-                          <Label
-                            htmlFor={corpus.id}
-                            className="text-sm font-medium cursor-pointer"
-                          >
-                            {corpus.name}
-                          </Label>
-                          <Badge
-                            variant={
-                              corpus.status === "synced"
-                                ? "default"
-                                : "destructive"
-                            }
-                            className="ml-auto"
-                          >
-                            {corpus.status}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {corpus.description} • {corpus.documents} documents
-                        </p>
+                      }}
+                      accept=".pdf,.doc,.docx,.txt,.md"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        document.getElementById("file-upload")?.click()
+                      }
+                      className="mt-4"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Choose Files
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Supported formats: PDF, DOC, DOCX, TXT, MD
+                  </p>
+                </div>
+
+                {/* Documents Table */}
+                {agent.documents.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">
+                      Uploaded Documents ({agent.documents.length})
+                    </h4>
+                    <div className="border rounded-lg">
+                      <div className="grid grid-cols-5 gap-4 p-3 border-b bg-muted/50 text-sm font-medium">
+                        <div>Name</div>
+                        <div>Type</div>
+                        <div>Size</div>
+                        <div>Upload Date</div>
+                        <div>Actions</div>
                       </div>
+                      {agent.documents.map((document) => (
+                        <div
+                          key={document.id}
+                          className="grid grid-cols-5 gap-4 p-3 border-b last:border-b-0 items-center"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span
+                              className="text-sm truncate"
+                              title={document.name}
+                            >
+                              {document.name}
+                            </span>
+                          </div>
+                          <div>
+                            <Badge variant="outline" className="text-xs">
+                              {document.type}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {document.size}
+                          </div>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {document.uploadDate}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Badge
+                              variant={
+                                document.status === "ready"
+                                  ? "default"
+                                  : document.status === "processing"
+                                  ? "secondary"
+                                  : "destructive"
+                              }
+                              className="text-xs"
+                            >
+                              {document.status}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDocumentDelete(document.id)}
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-        {/* Settings Sidebar */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Agent Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="status">Active</Label>
-                <Switch
-                  id="status"
-                  checked={agent.status === "active"}
-                  onCheckedChange={(checked : any) =>
-                    handleInputChange("status", checked ? "active" : "inactive")
-                  }
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="memory">Reference</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Reference material in the corpus
-                  </p>
+        <TabsContent value="model">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Model Configuration</CardTitle>
+                <CardDescription>
+                  Configure the AI model and generation parameters
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="model">Model</Label>
+                  <SelectModel
+                    models={models}
+                    selectedModel={agent.model}
+                    onChange={(model) => setAgent({ ...agent, model })}
+                  />
                 </div>
-                <Switch
-                  id="memory"
-                  checked={agent.enableMemory}
-                  onCheckedChange={(checked : any) =>
-                    handleInputChange("enableMemory", checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="web-search">Web Search</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Search the web for information
-                  </p>
+                <div className="grid gap-2">
+                  <Label htmlFor="temperature">
+                    Temperature: {agent.temperature}
+                  </Label>
+                  <input
+                    id="temperature"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={agent.temperature}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "temperature",
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Conservative</span>
+                    <span>Creative</span>
+                  </div>
                 </div>
-                <Switch
-                  id="web-search"
-                  checked={agent.enableWebSearch}
-                  onCheckedChange={(checked : any) =>
-                    handleInputChange("enableWebSearch", checked)
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Model Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Model Configuration</CardTitle>
-              <CardDescription>
-                Configure the AI model and generation parameters
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="model">Model</Label>
-                <SelectModel
-                models={models}
-                selectedModel={agent.model}
-                onChange={ (model) => {handleInputChange("model",model)}}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="temperature">
-                  Temperature: {agent.llm_temperature}
-                </Label>
-                <input
-                  id="temperature"
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.1"
-                  value={agent.llm_temperature}
-                  onChange={(e) =>
-                    handleInputChange("llm_temperature", parseFloat(e.target.value))
-                  }
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Conservative</span>
-                  <span>Creative</span>
+                <div className="grid gap-2">
+                  <Label htmlFor="max-tokens">Max Tokens</Label>
+                  <Input
+                    id="max-tokens"
+                    type="number"
+                    value={agent.maxTokens}
+                    onChange={(e) =>
+                      handleInputChange("maxTokens", parseInt(e.target.value))
+                    }
+                    placeholder="Maximum response length"
+                    min="1"
+                    max="4000"
+                  />
                 </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="max-tokens">Max Tokens</Label>
-                <Input
-                  id="max-tokens"
-                  type="number"
-                  value={agent.llm_max_tokens}
-                  onChange={(e) =>
-                    handleInputChange("llm_max_tokens", parseInt(e.target.value))
-                  }
-                  placeholder="Maximum response length"
-                  min="1"
-                  max="4000"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="response-format">Response Format</Label>
+                  <Select
+                    value={agent.responseFormat}
+                    onValueChange={(value) =>
+                      handleInputChange("responseFormat", value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select response format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="structured">Structured</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
