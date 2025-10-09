@@ -10,13 +10,19 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Plus, Edit, Trash2, X, Drama } from "lucide-react";
 import { Role, CorpusDocument } from "@/app/agents/agent_data";
+import { useAgentActions, useAgents } from "@/app/agents/agent_provider";
 
 interface RoleEditorProps {
+  agent_id: string;
   documents?: CorpusDocument[];
 }
 
-export function RoleEditor({ documents = [] }: RoleEditorProps) {
-  const [roles, setRoles] = React.useState<Role[]>([]);
+export function RoleEditor({ agent_id, documents = [] }: RoleEditorProps) {
+  const { setRoles } = useAgentActions();
+  const { state } = useAgents();
+  const agent = state.find(a => a.id === agent_id);
+  if (!agent) return <div>Agent not found</div>;
+  
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingRole, setEditingRole] = React.useState<Role | null>(null);
   const [formData, setFormData] = React.useState({
@@ -46,7 +52,7 @@ export function RoleEditor({ documents = [] }: RoleEditorProps) {
   };
 
   const handleDeleteRole = (roleId: string) => {
-    setRoles(roles.filter(role => role.id !== roleId));
+    setRoles(agent_id, roles => roles.filter(role => role.id !== roleId));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,7 +60,7 @@ export function RoleEditor({ documents = [] }: RoleEditorProps) {
     
     if (editingRole) {
       // Update existing role
-      setRoles(roles.map(role => 
+      setRoles(agent_id, roles => roles.map(role => 
         role.id === editingRole.id 
           ? { ...role, ...formData }
           : role
@@ -65,7 +71,7 @@ export function RoleEditor({ documents = [] }: RoleEditorProps) {
         id: Date.now().toString(),
         ...formData,
       };
-      setRoles([...roles, newRole]);
+      setRoles(agent_id, roles => [...roles, newRole]);
     }
     
     setIsModalOpen(false);
@@ -105,7 +111,7 @@ export function RoleEditor({ documents = [] }: RoleEditorProps) {
         </Button>
       </div>
 
-      {roles.length === 0 ? (
+      {agent.roles.length === 0 ? (
         <Card>
           <CardContent className="flex items-center justify-center py-8">
             <p className="text-muted-foreground">No roles configured yet</p>
@@ -113,7 +119,7 @@ export function RoleEditor({ documents = [] }: RoleEditorProps) {
         </Card>
       ) : (
         <div className="space-y-3">
-          {roles.map((role) => (
+          {agent.roles.map((role) => (
             <Card key={role.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -143,7 +149,7 @@ export function RoleEditor({ documents = [] }: RoleEditorProps) {
                 {role.documentAccess.length > 0 && (
                     <div className="flex flex-wrap gap-1 w-full">
                       <p className="text-sm font-medium">Documents:</p>
-                      {role.documentAccess.map((docId) => (
+                      {role.documentAccess.map((docId: string) => (
                         <Badge key={docId} variant="secondary" className="text-xs">
                           {getDocumentName(docId)}
                         </Badge>
