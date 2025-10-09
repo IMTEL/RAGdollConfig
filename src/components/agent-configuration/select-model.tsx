@@ -23,19 +23,14 @@ import {
 
 import { useEffect, useState } from "react";
 
-export interface LLM {
-  provider: string;
-  name: string;
-  GDPR_compliant: boolean | null;
-  description: string | null;
-}
+import { LLM } from "@/app/agents/agent_data";
 
 interface SelectAgentProps {
   selectedModel?: LLM | null;
   onChange?: (model: LLM | null) => void;
 }
 
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL;
+const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000/";
 
 export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
   const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
@@ -43,11 +38,15 @@ export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
   const [models, setModels] = useState<LLM[]>([]);
 
   useEffect(() => {
-    fetch(RAGDOLL_BASE_URL + "agentconfig/models")
+    fetch(RAGDOLL_BASE_URL + "get_models")
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
-        setModels(data as LLM[]);
+        //console.log(data);
+        if (Array.isArray(data)) {
+            setModels(data as LLM[]);
+        } else {
+            alert("Error retrieving models!");
+        }
       });
   }, []);
 
