@@ -53,10 +53,10 @@ export interface Role {
 }
 
 export interface LLM {
-    id: number
+    provider: string
     name: string
+    GDPR_compliant: boolean
     description: string
-    GDPRCompliant: boolean
 }
 
 const initialState: Agent[] = [
@@ -190,8 +190,9 @@ export const agentsClient = {
                     model: {
                         id: 0,
                         name: agent.llm_model,
+                        provider: agent.llm_provider,
                         description: "",
-                        GDPRCompliant: true,
+                        GDPR_compliant: true,
                     } as LLM,
                     status: agent.status || "inactive",
                     enableMemory: agent.enableMemory,

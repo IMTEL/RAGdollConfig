@@ -132,27 +132,6 @@ export default function AgentEditPage({
     alert("Agent configuration saved! (This is placeholder functionality)");
   };
 
-  const models: LLM[] = [
-    {
-      id: 1,
-      name: "Idun",
-      description: "Sheesh",
-      GDPRCompliant: true,
-    },
-    {
-      id: 2,
-      name: "ChatGPT5",
-      description: "Sheesh",
-      GDPRCompliant: false,
-    },
-    {
-      id: 3,
-      name: "DeepSeek",
-      description: "Sheesh",
-      GDPRCompliant: false,
-    },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -454,7 +433,6 @@ export default function AgentEditPage({
                 <div className="grid gap-2">
                   <Label htmlFor="model">Model</Label>
                   <SelectModel
-                    models={models}
                     selectedModel={agent.model}
                     onChange={(model) => setAgent(agent.id, (a) => ({ ...a, model }))}
                   />
