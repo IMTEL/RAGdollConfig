@@ -1,18 +1,13 @@
 "use client";
-import { Bot, Plus } from "lucide-react";
+import { Bot, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AgentModal } from "@/components/ui/modal";
 import { useState } from "react";
 import Link from "next/link";
-
-interface Agent {
-  id: number;
-  name: string;
-  description: string;
-  status: "active" | "inactive";
-  lastUpdated: string;
-}
+import { Agent, defaultAgent } from "./agent_data";
+import { useAgents, useAgentActions } from "./agent_provider";
 
 interface AgentCardProps {
   agent: Agent;
@@ -49,33 +44,29 @@ function AgentCard({ agent }: AgentCardProps) {
   );
 }
 
-export default function AgentsPage() {
-  // Mock data for demonstration
-  const [agents, setAgents] = useState<Agent[]>([
-    {
-      id: 1,
-      name: "Customer Support Agent",
-      description: "Handles customer inquiries and support requests",
-      status: "active",
-      lastUpdated: "2 hours ago",
-    },
-    {
-      id: 2,
-      name: "Sales Assistant",
-      description: "Assists with sales inquiries and product information",
-      status: "inactive",
-      lastUpdated: "1 day ago",
-    },
-    {
-      id: 3,
-      name: "Technical Documentation Bot",
-      description: "Helps users find technical documentation and guides",
-      status: "active",
-      lastUpdated: "30 minutes ago",
-    },
-  ]);
+function AgentCardSkeleton() {
+  return (
+    <div className="rounded-lg border p-6 space-y-4">
+      <div className="flex items-start justify-between">
+        <div className="space-y-2 flex-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+          <Skeleton className="h-4 w-full max-w-md" />
+        </div>
+        <Skeleton className="h-8 w-20" />
+      </div>
+      <Skeleton className="h-4 w-32" />
+    </div>
+  );
+}
 
+function AgentsPageContent() {
   const [modalOpen, setModalOpen] = useState(false);
+  const { state, isLoading } = useAgents();
+  const { setAgents } = useAgentActions();
 
   return (
     <div className="space-y-6">
@@ -83,7 +74,7 @@ export default function AgentsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Agents</h1>
           <p className="text-muted-foreground">
-            Manage your AI agents and their configurations
+            Manage and configure your AI agents
           </p>
         </div>
         <Button 
@@ -91,32 +82,56 @@ export default function AgentsPage() {
           className="cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Create Agent
+          Create New Agent
         </Button>
       </div>
       <AgentModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreate={(agent) => {
-          // TODO: Save new agent to backend
-          setAgents([
-            ...agents,
+          setAgents((prevAgents) => [
+            ...prevAgents,
             {
-              id: agents.length + 1,
+              ...defaultAgent(),
+              id: (prevAgents.length + 1).toString(),
+              databaseId: "",
               name: agent.name,
               description: agent.description,
-              status: "active",
-              lastUpdated: "just now",
-            },
+            } as Agent,
           ]);
           setModalOpen(false);
         }}
       />
       <div className="grid gap-4">
-        {agents.map((agent) => (
-          <AgentCard key={agent.id} agent={agent} />
-        ))}
+        {isLoading ? (
+          // Show skeleton loading cards while data is being fetched
+          Array.from({ length: 3 }).map((_, index) => (
+            <AgentCardSkeleton key={index} />
+          ))
+        ) : state.length > 0 ? (
+          // Show actual agent cards when data is loaded
+          state.map((agent) => (
+            <AgentCard key={agent.id} agent={agent} />
+          ))
+        ) : (
+          // Show empty state when no agents exist
+          <div className="text-center py-12">
+            <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No agents yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Create your first AI agent to get started
+            </p>
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Agent
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+export default function AgentsPage() {
+  return <AgentsPageContent />;
 }

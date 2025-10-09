@@ -1,101 +1,123 @@
-"use client"
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectLabel,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+"use client";
 
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
+import { useEffect, useState } from "react";
 
-export interface LLM {
-    id: number;
-    name: string;
-    description: string;
-    GDPRCompliant: boolean
-}
+import { LLM } from "@/app/agents/agent_data";
 
 interface SelectAgentProps {
-    models: LLM[];
-    selectedModel?: LLM | null
-    onChange?: (model: LLM | null) => void;
+  selectedModel?: LLM | null;
+  onChange?: (model: LLM | null) => void;
 }
 
-export function SelectModel({ models, selectedModel, onChange }: SelectAgentProps) {
+const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000/";
 
-    const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
-    const [pendingModel, setPendingModel] = useState<LLM | null>(null);
+export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
+  const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
+  const [pendingModel, setPendingModel] = useState<LLM | null>(null);
+  const [models, setModels] = useState<LLM[]>([]);
 
-    const onSelectModel = (value: string) => {
-        const model = models.find(model => model.id.toString() === value) ?? null
-
-        if (!model?.GDPRCompliant) {
-            setShowGDPRWarning(true)
-            setPendingModel(model)
-            return
+  useEffect(() => {
+    fetch(RAGDOLL_BASE_URL + "get_models")
+      .then((response) => response.json())
+      .then((data) => {
+        //console.log(data);
+        if (Array.isArray(data)) {
+            setModels(data as LLM[]);
+        } else {
+            alert("Error retrieving models!");
         }
-        onChange?.(model)
+      });
+  }, []);
+
+  const onSelectModel = (value: string) => {
+    const model = models.find((model) => getKey(model) === value) ?? null;
+
+    if (!model?.GDPR_compliant) {
+      setShowGDPRWarning(true);
+      setPendingModel(model);
+      return;
     }
+    onChange?.(model);
+  };
 
-    const warningSelectContinue = () => {
-        setShowGDPRWarning(false)
-        onChange?.(pendingModel)
-    }
+  const warningSelectContinue = () => {
+    setShowGDPRWarning(false);
+    onChange?.(pendingModel);
+  };
 
-    const warningSelectCancel = () => {
-        setShowGDPRWarning(false)
-    }
+  const warningSelectCancel = () => {
+    setShowGDPRWarning(false);
+  };
 
-    return (
-        <div>
-            <div>
-                <Select value={selectedModel?.id.toString() ?? ""} onValueChange={onSelectModel} >
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select a LLM" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectGroup>
-                            <SelectLabel>Select an LLM</SelectLabel>
-                            {models.map(model =>
-                                <SelectItem key={model.id} value={model.id.toString()}>{model.name}</SelectItem>
-                            )}
-                        </SelectGroup>
-                    </SelectContent>
-                </Select>
-            </div>
+  const getKey = (llm: LLM | null | undefined): string => {
+    if (!llm) return "";
+    return llm.provider + llm.name;
+  };
 
+  return (
+    <div>
+      <div>
+        <Select
+          value={getKey(selectedModel) ?? ""}
+          onValueChange={onSelectModel}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select a LLM" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>Select an LLM</SelectLabel>
+              {models.map((model) => (
+                <SelectItem key={getKey(model)} value={getKey(model)}>
+                  {model.provider + ": " + model.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
 
-            <AlertDialog open={showGDPRWarning}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Data Privacy Notice</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This selected model may not fully comply with GDPR requirements and should be avoided in scenarios involving sensitive or regulated personal data.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={warningSelectCancel}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={warningSelectContinue}>
-                            Continue
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
-    )
+      <AlertDialog open={showGDPRWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Data Privacy Notice</AlertDialogTitle>
+            <AlertDialogDescription>
+              This selected model may not fully comply with GDPR requirements
+              and should be avoided in scenarios involving sensitive or
+              regulated personal data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={warningSelectCancel}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={warningSelectContinue}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 }
