@@ -232,7 +232,7 @@ export const agentsClient = {
                     llm_temperature: agent.temperature,
                     llm_max_tokens: agent.maxTokens,
                     llm_api_key: "sk-1234567890abcdef",
-                    access_key: ["api_key_frontend_app", "api_key_mobile_app"],
+                    access_key: [],
                     retrieval_method: "semantic",
                     embedding_model: "text-embedding-ada-002",
                     status: agent.status,

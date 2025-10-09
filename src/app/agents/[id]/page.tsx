@@ -42,7 +42,9 @@ import { RoleEditor } from "@/components/agent-configuration/role-editor";
 import { Agent, agentsClient, CorpusDocument, LLM } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 
-export default function AgentEditPage({
+const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001/";
+
+export default function AgentConfigurationPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -135,6 +137,20 @@ export default function AgentEditPage({
     alert("Agent configuration saved!");
   };
 
+  const handleTestAgent = () => {
+    // Log the attempt
+    console.log('Testing agent:', agent.name, 'with ID:', agent.databaseId);
+
+    try {
+     // const chatUrl = `/chat?${params.toString()}`;
+     const chatUrl = `${CHAT_WEBSITE_URL}${agent.databaseId}`;
+      window.open(chatUrl, '_blank');
+    } catch (error) {
+      console.error('Error launching chat:', error);
+      alert('Failed to launch chat interface. Please try again.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -153,7 +169,7 @@ export default function AgentEditPage({
         <div className="ml-auto flex gap-2">
           <Button
             variant="outline"
-            onClick={() => alert("Test Agent functionality coming soon!")}
+            onClick={handleTestAgent}
           >
             <Bot className="mr-2 h-4 w-4" />
             Test Agent
