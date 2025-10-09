@@ -79,7 +79,7 @@ const AgentContext = createContext<{
 } | null>(null);
 
 export function AgentProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(agentReducer, []);
+  const [state, dispatch] = useReducer(agentReducer, initialState);
 
   // Load from localStorage after hydration
   useEffect(() => {
