@@ -37,82 +37,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { use } from "react";
 import {
   SelectModel,
-  LLM,
 } from "@/components/agent-configuration/select-model";
-
-interface Document {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploadDate: string;
-  status: "processing" | "ready" | "error";
-}
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  systemPrompt: string;
-  temperature: number;
-  maxTokens: number;
-  model: LLM | null;
-  status: "active" | "inactive";
-  enableMemory: boolean;
-  enableWebSearch: boolean;
-  responseFormat: "text" | "structured";
-  documents: Document[];
-}
+import { RoleEditor } from "@/components/agent-configuration/role-editor";
+import { Agent, agentsClient, CorpusDocument, LLM } from "../agent_data";
+import { useAgentActions, useAgents } from "../agent_provider";
 
 export default function AgentEditPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { state } = useAgents();
+  const { setAgent, setDocuments } = useAgentActions();
   const router = useRouter();
   const { id } = use(params);
 
-  // Mock data for demonstration
-  const [agent, setAgent] = useState<Agent>({
-    id: id,
-    name: "Customer Support Agent",
-    description: "Handles customer inquiries and support requests",
-    systemPrompt:
-      "You are a helpful customer support agent. Always be polite and professional. If you don't know something, offer to escalate to a human agent.",
-    temperature: 0.7,
-    maxTokens: 1000,
-    model: null,
-    status: "active",
-    enableMemory: true,
-    enableWebSearch: false,
-    responseFormat: "text",
-    documents: [
-      {
-        id: "doc-1",
-        name: "Customer Support FAQ.pdf",
-        type: "PDF",
-        size: "2.3 MB",
-        uploadDate: "2024-01-15",
-        status: "ready",
-      },
-      {
-        id: "doc-2",
-        name: "Product Guidelines.docx",
-        type: "DOCX",
-        size: "1.8 MB",
-        uploadDate: "2024-01-14",
-        status: "ready",
-      },
-      {
-        id: "doc-3",
-        name: "Company Policies.txt",
-        type: "TXT",
-        size: "0.5 MB",
-        uploadDate: "2024-01-13",
-        status: "processing",
-      },
-    ],
-  });
+  const agent = state.find((agent) => agent.databaseId === id || agent.id === id);
+
+  if (!agent) {
+    return <div> Agent not found </div>;
+  }
 
   const [dragActive, setDragActive] = useState(false);
 
@@ -120,11 +64,11 @@ export default function AgentEditPage({
     field: keyof Agent,
     value: string | number | boolean | null
   ) => {
-    setAgent((prev) => ({ ...prev, [field]: value }));
+    setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
   };
 
   const handleFileUpload = useCallback((files: FileList) => {
-    const newDocuments: Document[] = Array.from(files).map((file, index) => ({
+    const newDocuments: CorpusDocument[] = Array.from(files).map((file, index) => ({
       id: `doc-${Date.now()}-${index}`,
       name: file.name,
       type: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
@@ -133,26 +77,22 @@ export default function AgentEditPage({
       status: "processing" as const,
     }));
 
-    setAgent((prev) => ({
-      ...prev,
-      documents: [...prev.documents, ...newDocuments],
-    }));
+    setDocuments(agent.id, (prev) => [...prev, ...newDocuments]);
 
     // Simulate processing
     setTimeout(() => {
-      setAgent((prev) => ({
-        ...prev,
-        documents: prev.documents.map((doc) =>
+      setDocuments(agent.id, (prev) => 
+        prev.map((doc) =>
           newDocuments.some((newDoc) => newDoc.id === doc.id)
             ? { ...doc, status: "ready" as const }
             : doc
-        ),
-      }));
+        )
+      );
     }, 2000);
   }, []);
 
   const handleDocumentDelete = (documentId: string) => {
-    setAgent((prev) => ({
+    setAgent(agent.id, (prev) => ({
       ...prev,
       documents: prev.documents.filter((doc) => doc.id !== documentId),
     }));
@@ -182,7 +122,12 @@ export default function AgentEditPage({
 
   const handleSave = () => {
     // TODO: Implement save functionality
-    console.log("Saving agent:", agent);
+    agentsClient.updateAgent(agent).then((newAgent) => {
+        setAgent(agent.id, (_) => newAgent);
+        if (newAgent.databaseId !== agent.databaseId) {
+            router.replace(`/agents/${newAgent.databaseId}`);
+        }
+    });
     // Temporary alert for demonstration
     alert("Agent configuration saved! (This is placeholder functionality)");
   };
@@ -233,7 +178,7 @@ export default function AgentEditPage({
           </Button>
           <Button onClick={handleSave}>
             <Save className="mr-2 h-4 w-4" />
-            Save Changes
+            Upload Changes
           </Button>
         </div>
       </div>
@@ -432,7 +377,7 @@ export default function AgentEditPage({
                         <div>Type</div>
                         <div>Size</div>
                         <div>Upload Date</div>
-                        <div>Actions</div>
+                        <div>Status</div>
                       </div>
                       {agent.documents.map((document) => (
                         <div
@@ -492,6 +437,10 @@ export default function AgentEditPage({
           </div>
         </TabsContent>
 
+        <TabsContent value="roles">
+            <RoleEditor documents={agent.documents} agent_id={agent.id} />
+        </TabsContent>
+
         <TabsContent value="model">
           <div className="space-y-6">
             <Card>
@@ -507,7 +456,7 @@ export default function AgentEditPage({
                   <SelectModel
                     models={models}
                     selectedModel={agent.model}
-                    onChange={(model) => setAgent({ ...agent, model })}
+                    onChange={(model) => setAgent(agent.id, (a) => ({ ...a, model }))}
                   />
                 </div>
                 <div className="grid gap-2">

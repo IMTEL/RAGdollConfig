@@ -5,14 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { AgentModal } from "@/components/ui/modal";
 import { useState } from "react";
 import Link from "next/link";
-
-interface Agent {
-  id: number;
-  name: string;
-  description: string;
-  status: "active" | "inactive";
-  lastUpdated: string;
-}
+import { Agent, defaultAgent } from "./agent_data";
+import { useAgents, useAgentActions } from "./agent_provider";
 
 interface AgentCardProps {
   agent: Agent;
@@ -49,33 +43,10 @@ function AgentCard({ agent }: AgentCardProps) {
   );
 }
 
-export default function AgentsPage() {
-  // Mock data for demonstration
-  const [agents, setAgents] = useState<Agent[]>([
-    {
-      id: 1,
-      name: "Customer Support Agent",
-      description: "Handles customer inquiries and support requests",
-      status: "active",
-      lastUpdated: "2 hours ago",
-    },
-    {
-      id: 2,
-      name: "Sales Assistant",
-      description: "Assists with sales inquiries and product information",
-      status: "inactive",
-      lastUpdated: "1 day ago",
-    },
-    {
-      id: 3,
-      name: "Technical Documentation Bot",
-      description: "Helps users find technical documentation and guides",
-      status: "active",
-      lastUpdated: "30 minutes ago",
-    },
-  ]);
-
+function AgentsPageContent() {
   const [modalOpen, setModalOpen] = useState(false);
+  const { state } = useAgents();
+  const { setAgents } = useAgentActions();
 
   return (
     <div className="space-y-6">
@@ -98,25 +69,28 @@ export default function AgentsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreate={(agent) => {
-          // TODO: Save new agent to backend
-          setAgents([
-            ...agents,
+          setAgents((prevAgents) => [
+            ...prevAgents,
             {
-              id: agents.length + 1,
+              ...defaultAgent(),
+              id: (prevAgents.length + 1).toString(),
+              databaseId: "",
               name: agent.name,
               description: agent.description,
-              status: "active",
-              lastUpdated: "just now",
-            },
+            } as Agent,
           ]);
           setModalOpen(false);
         }}
       />
       <div className="grid gap-4">
-        {agents.map((agent) => (
+        {state.map((agent) => (
           <AgentCard key={agent.id} agent={agent} />
         ))}
       </div>
     </div>
   );
+}
+
+export default function AgentsPage() {
+  return <AgentsPageContent />;
 }
