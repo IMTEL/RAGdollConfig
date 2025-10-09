@@ -97,7 +97,7 @@ export const initialState: Agent[] = [
                 type: "TXT",
                 size: "0.5 MB",
                 uploadDate: "2024-01-13",
-                status: "processing",
+                status: "ready",
             },
         ],
         roles: [
@@ -127,3 +127,82 @@ export const initialState: Agent[] = [
         roles: [],
     },
 ]
+
+const backend_api_url = process.env.BACKEND_API_URL || "http://localhost:8000"
+
+interface DatabaseAgent {
+    id: string // optional for creation
+    name: string
+    description: string
+    prompt: string
+    corpa: CorpusDocument[]
+    llm_provider: string
+    llm_model: string // TODO: Change to LLM model
+    llm_temperature: number
+    llm_max_tokens: number
+    llm_api_key: string
+    access_key: string[] // may change later
+    retrieval_method?: string
+    embedding_model?: string // optional for now
+    status?: "active" | "inactive"
+    response_format: "text" | "structured"
+    enableMemory: boolean // not in backend
+    enableWebSearch: boolean // not in backend and also we wont do this low key
+    last_updated?: string
+    roles: DatabaseRole[]
+}
+
+interface DatabaseRole {
+    name: string
+    description: string
+    subset_of_corpa: number[]
+}
+
+export const agentsClient = {
+    // Fetch all agents
+    async getAll(): Promise<DatabaseAgent[]> {
+        const res = await fetch(`${backend_api_url}/agents`)
+        if (!res.ok) {
+            throw new Error("Failed to fetch agents")
+        }
+
+        const agents = await res.json()
+
+        return agents.map((agent: any) => ({
+            ...agent,
+            status: agent.status || "inactive", // Default to inactive if status is missing
+        }))
+    },
+
+    convertFromDB(agents: DatabaseAgent[]): Agent[] {
+        return agents.map(
+            (agent) =>
+                ({
+                    id: agent.id,
+                    name: agent.name,
+                    description: agent.description,
+                    systemPrompt: agent.prompt,
+                    temperature: agent.llm_temperature,
+                    maxTokens: agent.llm_max_tokens,
+                    model: {
+                        id: 0,
+                        name: agent.llm_model,
+                        description: "",
+                        GDPRCompliant: true,
+                    } as LLM,
+                    status: agent.status || "inactive",
+                    enableMemory: agent.enableMemory,
+                    enableWebSearch: agent.enableWebSearch,
+                    responseFormat: agent.response_format,
+                    documents: [], // TODO
+                    roles: agent.roles.map((role, index) => ({
+                        id: `role-${index + 1}`,
+                        name: role.name,
+                        prompt: role.description,
+                        documentAccess: [], // TODO
+                    })),
+                    lastUpdated: agent.last_updated || "unknown",
+                } as Agent)
+        )
+    },
+}

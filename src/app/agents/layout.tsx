@@ -1,4 +1,6 @@
 "use client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { AgentProvider } from "./agent_provider";
 
@@ -7,5 +9,6 @@ export default function AgentsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AgentProvider>{children}</AgentProvider>;
+  const [client] = useState(() => new QueryClient());
+  return <QueryClientProvider client={client}><AgentProvider>{children}</AgentProvider></QueryClientProvider>;
 }

@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useReducer, useEffect } from "react";
-import { Agent, CorpusDocument, initialState, Role } from "./agent_data";
+import { Agent, agentsClient, CorpusDocument, initialState, Role } from "./agent_data";
 
 // save state to localStorage to make it persistent across reloads
 const STORAGE_KEY = 'ragdoll-agents';
@@ -83,10 +83,14 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
   // Load from localStorage after hydration
   useEffect(() => {
-    const storedAgents = loadFromStorage();
-    if (storedAgents !== initialState) {
-      dispatch({ type: 'SET_AGENTS', payload: () => storedAgents });
-    }
+    // const storedAgents = loadFromStorage();
+    // if (storedAgents !== initialState) {
+    //   dispatch({ type: 'SET_AGENTS', payload: () => storedAgents });
+    // }
+
+    agentsClient.getAll().then(databaseContent => {
+        dispatch({ type: 'SET_AGENTS', payload: () => agentsClient.convertFromDB(databaseContent) });
+    });
   }, []);
 
   // Save to localStorage whenever state changes
