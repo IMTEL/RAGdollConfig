@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { AgentModal } from "@/components/ui/modal";
 import { useState } from "react";
 import Link from "next/link";
-import { Agent, defaultAgent, initialState } from "./agent_data";
+import { Agent, defaultAgent } from "./agent_data";
 import { useAgents, useAgentActions } from "./agent_provider";
 
 interface AgentCardProps {
@@ -74,6 +74,7 @@ function AgentsPageContent() {
             {
               ...defaultAgent(),
               id: (prevAgents.length + 1).toString(),
+              databaseId: "",
               name: agent.name,
               description: agent.description,
             } as Agent,

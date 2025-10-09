@@ -39,7 +39,7 @@ import {
   SelectModel,
 } from "@/components/agent-configuration/select-model";
 import { RoleEditor } from "@/components/agent-configuration/role-editor";
-import { Agent, CorpusDocument, LLM } from "../agent_data";
+import { Agent, agentsClient, CorpusDocument, LLM } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 
 export default function AgentEditPage({
@@ -52,7 +52,7 @@ export default function AgentEditPage({
   const router = useRouter();
   const { id } = use(params);
 
-  const agent = state.find((agent) => agent.id === id);
+  const agent = state.find((agent) => agent.databaseId === id || agent.id === id);
 
   if (!agent) {
     return <div> Agent not found </div>;
@@ -64,7 +64,7 @@ export default function AgentEditPage({
     field: keyof Agent,
     value: string | number | boolean | null
   ) => {
-    setAgent((prev) => ({ ...prev, [field]: value }));
+    setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
   };
 
   const handleFileUpload = useCallback((files: FileList) => {
@@ -92,7 +92,7 @@ export default function AgentEditPage({
   }, []);
 
   const handleDocumentDelete = (documentId: string) => {
-    setAgent((prev) => ({
+    setAgent(agent.id, (prev) => ({
       ...prev,
       documents: prev.documents.filter((doc) => doc.id !== documentId),
     }));
@@ -122,7 +122,12 @@ export default function AgentEditPage({
 
   const handleSave = () => {
     // TODO: Implement save functionality
-    console.log("Saving agent:", agent);
+    agentsClient.updateAgent(agent).then((newAgent) => {
+        setAgent(agent.id, (_) => newAgent);
+        if (newAgent.databaseId !== agent.databaseId) {
+            router.replace(`/agents/${newAgent.databaseId}`);
+        }
+    });
     // Temporary alert for demonstration
     alert("Agent configuration saved! (This is placeholder functionality)");
   };
@@ -451,7 +456,7 @@ export default function AgentEditPage({
                   <SelectModel
                     models={models}
                     selectedModel={agent.model}
-                    onChange={(model) => setAgent((agent) => ({ ...agent, model }))}
+                    onChange={(model) => setAgent(agent.id, (a) => ({ ...a, model }))}
                   />
                 </div>
                 <div className="grid gap-2">

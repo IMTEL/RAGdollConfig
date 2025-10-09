@@ -9,6 +9,7 @@ export interface CorpusDocument {
 
 export interface Agent {
     id: string
+    databaseId: string // ID from backend
     name: string
     description: string
     systemPrompt: string
@@ -27,6 +28,7 @@ export interface Agent {
 export function defaultAgent(): Agent {
     return {
         id: "",
+        databaseId: "",
         name: "unnamed agent",
         description: "",
         systemPrompt: "",
@@ -57,7 +59,7 @@ export interface LLM {
     GDPRCompliant: boolean
 }
 
-export const initialState: Agent[] = [
+const initialState: Agent[] = [
     {
         ...defaultAgent(),
         id: "1",
@@ -179,6 +181,7 @@ export const agentsClient = {
             (agent) =>
                 ({
                     id: agent.id,
+                    databaseId: agent.id,
                     name: agent.name,
                     description: agent.description,
                     systemPrompt: agent.prompt,
@@ -204,5 +207,63 @@ export const agentsClient = {
                     lastUpdated: agent.last_updated || "unknown",
                 } as Agent)
         )
+    },
+
+    convertToDB(agents: Agent[]): DatabaseAgent[] {
+        return agents.map(
+            (agent) =>
+                ({
+                    id: agent.databaseId,
+                    name: agent.name,
+                    description: agent.description,
+                    prompt: agent.systemPrompt,
+                    corpa: [], // TODO
+                    roles: agent.roles.map((role) => ({
+                        name: role.name,
+                        description: role.prompt,
+                        subset_of_corpa: [], // TODO
+                    })),
+                    llm_provider: "idun",
+                    llm_model: agent.model?.name || "none",
+                    llm_temperature: agent.temperature,
+                    llm_max_tokens: agent.maxTokens,
+                    llm_api_key: "sk-1234567890abcdef",
+                    access_key: ["api_key_frontend_app", "api_key_mobile_app"],
+                    retrieval_method: "semantic",
+                    embedding_model: "text-embedding-ada-002",
+                    status: agent.status,
+                    response_format: agent.responseFormat,
+                    last_updated: agent.lastUpdated,
+                    enableMemory: agent.enableMemory,
+                    enableWebSearch: agent.enableWebSearch,
+                } as DatabaseAgent)
+        )
+    },
+
+    async updateAgent(agent: Agent): Promise<Agent> {
+        const response = await fetch(`${backend_api_url}/agents/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(this.convertToDB([agent])[0]),
+        })
+        if (!response.ok) {
+            throw new Error(`Failed to update agent: ${response.status}`)
+        }
+        return await this.convertFromDB([await response.json()])[0]
+    },
+    // Get an agent by ID
+    async getAgentById(agentId: string): Promise<Agent> {
+        const response = await fetch(`${backend_api_url}/agents/${agentId}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+        if (!response.ok) {
+            throw new Error(`Failed to fetch agent: ${response.status}`)
+        }
+        return await response.json()
     },
 }
