@@ -1,7 +1,8 @@
 "use client";
-import { Bot, Plus } from "lucide-react";
+import { Bot, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AgentModal } from "@/components/ui/modal";
 import { useState } from "react";
 import Link from "next/link";
@@ -43,9 +44,28 @@ function AgentCard({ agent }: AgentCardProps) {
   );
 }
 
+function AgentCardSkeleton() {
+  return (
+    <div className="rounded-lg border p-6 space-y-4">
+      <div className="flex items-start justify-between">
+        <div className="space-y-2 flex-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+          <Skeleton className="h-4 w-full max-w-md" />
+        </div>
+        <Skeleton className="h-8 w-20" />
+      </div>
+      <Skeleton className="h-4 w-32" />
+    </div>
+  );
+}
+
 function AgentsPageContent() {
   const [modalOpen, setModalOpen] = useState(false);
-  const { state } = useAgents();
+  const { state, isLoading } = useAgents();
   const { setAgents } = useAgentActions();
 
   return (
@@ -83,9 +103,30 @@ function AgentsPageContent() {
         }}
       />
       <div className="grid gap-4">
-        {state.map((agent) => (
-          <AgentCard key={agent.id} agent={agent} />
-        ))}
+        {isLoading ? (
+          // Show skeleton loading cards while data is being fetched
+          Array.from({ length: 3 }).map((_, index) => (
+            <AgentCardSkeleton key={index} />
+          ))
+        ) : state.length > 0 ? (
+          // Show actual agent cards when data is loaded
+          state.map((agent) => (
+            <AgentCard key={agent.id} agent={agent} />
+          ))
+        ) : (
+          // Show empty state when no agents exist
+          <div className="text-center py-12">
+            <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No agents yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Create your first AI agent to get started
+            </p>
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Agent
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -64,10 +64,12 @@ export default function AgentEditPage({
     field: keyof Agent,
     value: string | number | boolean | null
   ) => {
+    agent.uploaded = false;
     setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
   };
 
   const handleFileUpload = useCallback((files: FileList) => {
+    agent.uploaded = false;
     const newDocuments: CorpusDocument[] = Array.from(files).map((file, index) => ({
       id: `doc-${Date.now()}-${index}`,
       name: file.name,
@@ -92,6 +94,7 @@ export default function AgentEditPage({
   }, []);
 
   const handleDocumentDelete = (documentId: string) => {
+    agent.uploaded = false;
     setAgent(agent.id, (prev) => ({
       ...prev,
       documents: prev.documents.filter((doc) => doc.id !== documentId),
@@ -129,7 +132,7 @@ export default function AgentEditPage({
         }
     });
     // Temporary alert for demonstration
-    alert("Agent configuration saved! (This is placeholder functionality)");
+    alert("Agent configuration saved!");
   };
 
   return (
@@ -155,7 +158,14 @@ export default function AgentEditPage({
             <Bot className="mr-2 h-4 w-4" />
             Test Agent
           </Button>
-          <Button onClick={handleSave}>
+          <Button
+            onClick={handleSave}
+            className={
+              agent.uploaded === false
+                ? "animate-pulse ring-2 ring-offset-2 ring-sky-500 shadow-lg shadow-blue-500/60"
+                : undefined
+            }
+          >
             <Save className="mr-2 h-4 w-4" />
             Upload Changes
           </Button>

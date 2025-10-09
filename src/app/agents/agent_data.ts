@@ -23,6 +23,7 @@ export interface Agent {
     documents: CorpusDocument[]
     roles: Role[]
     lastUpdated: string
+    uploaded: boolean // whether the agent has been uploaded to the backend
 }
 
 export function defaultAgent(): Agent {
@@ -42,6 +43,7 @@ export function defaultAgent(): Agent {
         documents: [],
         roles: [],
         lastUpdated: "unknown",
+        uploaded: false,
     }
 }
 
@@ -206,6 +208,7 @@ export const agentsClient = {
                         documentAccess: [], // TODO
                     })),
                     lastUpdated: agent.last_updated || "unknown",
+                    uploaded: true,
                 } as Agent)
         )
     },

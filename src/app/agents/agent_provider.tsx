@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useReducer, useEffect } from "react";
+import { createContext, ReactNode, useContext, useReducer, useEffect, useState } from "react";
 import { Agent, agentsClient, CorpusDocument, Role } from "./agent_data";
 
 // save state to localStorage to make it persistent across reloads
@@ -76,10 +76,12 @@ function agentReducer(state: Agent[], action: AgentAction): Agent[] {
 const AgentContext = createContext<{
   state: Agent[];
   dispatch: React.Dispatch<AgentAction>;
+  isLoading: boolean;
 } | null>(null);
 
 export function AgentProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(agentReducer, []);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load from localStorage after hydration
   useEffect(() => {
@@ -96,6 +98,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
             }
         });
         dispatch({ type: 'SET_AGENTS', payload: () => agents });
+        setIsLoading(false);
+    }).catch(error => {
+        console.error('Failed to load agents:', error);
+        // Still set loading to false even on error, and use stored agents
+        dispatch({ type: 'SET_AGENTS', payload: () => storedAgents });
+        setIsLoading(false);
     });
   }, []);
 
@@ -105,7 +113,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
   return (
-    <AgentContext.Provider value={{ state, dispatch }}>
+    <AgentContext.Provider value={{ state, dispatch, isLoading }}>
       {children}
     </AgentContext.Provider>
   );
