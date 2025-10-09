@@ -21,14 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { useState } from "react";
-
-
-export interface LLM {
-    id: number;
-    name: string;
-    description: string;
-    GDPRCompliant: boolean
-}
+import { LLM } from "@/app/agents/agent_data";
 
 interface SelectAgentProps {
     models: LLM[];

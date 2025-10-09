@@ -37,32 +37,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { use } from "react";
 import {
   SelectModel,
-  LLM,
 } from "@/components/agent-configuration/select-model";
-
-interface Document {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploadDate: string;
-  status: "processing" | "ready" | "error";
-}
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  systemPrompt: string;
-  temperature: number;
-  maxTokens: number;
-  model: LLM | null;
-  status: "active" | "inactive";
-  enableMemory: boolean;
-  enableWebSearch: boolean;
-  responseFormat: "text" | "structured";
-  documents: Document[];
-}
+import { RoleEditor } from "@/components/agent-configuration/role-editor";
+import { Agent, CorpusDocument, LLM } from "../agent_data";
 
 export default function AgentEditPage({
   params,
@@ -124,7 +101,7 @@ export default function AgentEditPage({
   };
 
   const handleFileUpload = useCallback((files: FileList) => {
-    const newDocuments: Document[] = Array.from(files).map((file, index) => ({
+    const newDocuments: CorpusDocument[] = Array.from(files).map((file, index) => ({
       id: `doc-${Date.now()}-${index}`,
       name: file.name,
       type: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
@@ -490,6 +467,10 @@ export default function AgentEditPage({
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="roles">
+            <RoleEditor documents={agent.documents} />
         </TabsContent>
 
         <TabsContent value="model">
