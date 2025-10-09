@@ -42,6 +42,8 @@ import { RoleEditor } from "@/components/agent-configuration/role-editor";
 import { Agent, agentsClient, CorpusDocument, LLM } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 
+const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001/";
+
 export default function AgentConfigurationPage({
   params,
 }: {
@@ -137,22 +139,14 @@ export default function AgentConfigurationPage({
 
   const handleTestAgent = () => {
     // Log the attempt
-    console.log('Testing agent:', agent.name, 'with ID:', agent.id);
+    console.log('Testing agent:', agent.name, 'with ID:', agent.databaseId);
 
     try {
-      const params = new URLSearchParams({
-        agent: agent.id.toString(),
-        name: agent.name
-      });
-      
      // const chatUrl = `/chat?${params.toString()}`;
-     const chatUrl = `http://localhost:3000?agent=${agent.id}`;
-
-      console.log('Opening chat URL:', chatUrl);
+     const chatUrl = `${CHAT_WEBSITE_URL}${agent.databaseId}`;
       window.open(chatUrl, '_blank');
     } catch (error) {
       console.error('Error launching chat:', error);
-      // You might want to show an error message to the user
       alert('Failed to launch chat interface. Please try again.');
     }
   };
