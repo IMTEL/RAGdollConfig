@@ -78,7 +78,7 @@ export default function AgentConfigurationPage({
   const handleFileUpload = useCallback((files: FileList) => {
     registerUpdate()
     const newDocuments: CorpusDocument[] = Array.from(files).map((file, index) => ({
-      id: `doc-${Date.now()}-${index}`,
+      id: agent.documents.length + 1 + index,
       name: file.name,
       type: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
       size: `${(file.size / 1024).toFixed(1)} KB`,
@@ -102,7 +102,7 @@ export default function AgentConfigurationPage({
     });
   }, []);
 
-  const handleDocumentDelete = (documentId: string) => {
+  const handleDocumentDelete = (documentId: number) => {
     registerUpdate()
     setAgent(agent.id, (prev) => ({
       ...prev,

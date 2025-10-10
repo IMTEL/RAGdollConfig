@@ -1,5 +1,5 @@
 export interface CorpusDocument {
-    id: string
+    id: number
     name: string
     type: string
     size: string
@@ -52,7 +52,7 @@ export interface Role {
     id: string
     name: string
     prompt: string
-    documentAccess: string[] // Array of document IDs
+    documentAccess: number[] // Array of document IDs
 }
 
 export interface LLM {
@@ -62,75 +62,77 @@ export interface LLM {
     description: string
 }
 
+const dummyDocuments: CorpusDocument[] = [
+  {
+    id: 0,
+    name: "Scene 1 Document.pdf",
+    type: "PDF",
+    size: "2.3 MB",
+    uploadDate: "2024-01-15",
+    status: "ready",
+  },
+  {
+    id: 1,
+    name: "Scene 2 Document.pdf",
+    type: "PDF",
+    size: "2.3 MB",
+    uploadDate: "2024-01-15",
+    status: "ready",
+  },
+  {
+    id: 2,
+    name: "Fish Facts.docx",
+    type: "DOCX",
+    size: "1.8 MB",
+    uploadDate: "2024-01-14",
+    status: "ready",
+  },
+  {
+    id: 3,
+    name: "Policies.txt",
+    type: "TXT",
+    size: "0.5 MB",
+    uploadDate: "2024-01-13",
+    status: "ready",
+  },
+];
+
 const initialState: AgentUIState[] = [
-    {
-        ...defaultAgent(),
-        id: "1",
-        name: "Blue Sector NPC",
-        description: "General Blue Sector NPC for in-game interactions",
-        status: "active",
-        systemPrompt: "you are an employee at Blue Sector",
-        lastUpdated: "2025-09-10",
-        documents: [
-            {
-                id: "doc-1",
-                name: "Scene 1 Document.pdf",
-                type: "PDF",
-                size: "2.3 MB",
-                uploadDate: "2024-01-15",
-                status: "ready",
-            },
-            {
-                id: "doc-2",
-                name: "Scene 2 Document.pdf",
-                type: "PDF",
-                size: "2.3 MB",
-                uploadDate: "2024-01-15",
-                status: "ready",
-            },
-            {
-                id: "doc-3",
-                name: "Fish Facts.docx",
-                type: "DOCX",
-                size: "1.8 MB",
-                uploadDate: "2024-01-14",
-                status: "ready",
-            },
-            {
-                id: "doc-4",
-                name: "Policies.txt",
-                type: "TXT",
-                size: "0.5 MB",
-                uploadDate: "2024-01-13",
-                status: "ready",
-            },
-        ],
-        roles: [
-            {
-                id: "role-1",
-                name: "Fish Cutter",
-                prompt: "you are a very experienced fish cutter",
-                documentAccess: ["doc-1", "doc-3", "doc-4"],
-            },
-            {
-                id: "role-2",
-                name: "Supervisor",
-                prompt: "you are the supervisor of the fish cutting team",
-                documentAccess: ["doc-2", "doc-3", "doc-4"],
-            },
-        ],
-    },
-    {
-        ...defaultAgent(),
-        id: "2",
-        name: "Tutoring agent",
-        systemPrompt: "you are a tutor assisting students",
-        description: "An agent to help students with their questions",
-        status: "inactive",
-        lastUpdated: "2024-12-01",
-        documents: [],
-        roles: [],
-    },
+  {
+    ...defaultAgent(),
+    id: "1",
+    name: "Blue Sector NPC",
+    description: "General Blue Sector NPC for in-game interactions",
+    status: "active",
+    systemPrompt: "you are an employee at Blue Sector",
+    lastUpdated: "2025-09-10",
+    documents: dummyDocuments,
+    roles: [
+      {
+        id: "role-1",
+        name: "Fish Cutter",
+        prompt: "you are a very experienced fish cutter",
+        documentAccess: [1, 3, 4],
+      },
+      {
+        id: "role-2",
+        name: "Supervisor",
+        prompt: "you are the supervisor of the fish cutting team",
+        documentAccess: [2, 3, 4],
+      },
+    ],
+  },
+  {
+    ...defaultAgent(),
+    id: "2",
+    name: "Tutoring agent",
+    systemPrompt: "you are a tutor assisting students",
+    description: "An agent to help students with their questions",
+    status: "inactive",
+    lastUpdated: "2024-12-01",
+    documents: [],
+    roles: [],
+  },
 ]
 
 const backend_api_url = process.env.BACKEND_API_URL || "http://localhost:8000"
@@ -181,36 +183,36 @@ export const agentsClient = {
 
     convertFromDB(agents: DatabaseAgent[]): AgentUIState[] {
         return agents.map(
-            (agent) =>
-                ({
-                    id: agent.id,
-                    databaseId: agent.id,
-                    name: agent.name,
-                    description: agent.description,
-                    systemPrompt: agent.prompt,
-                    temperature: agent.llm_temperature,
-                    maxTokens: agent.llm_max_tokens,
-                    model: {
-                        id: 0,
-                        name: agent.llm_model,
-                        provider: agent.llm_provider,
-                        description: "",
-                        GDPR_compliant: true,
-                    } as LLM,
-                    status: agent.status || "inactive",
-                    enableMemory: agent.enableMemory,
-                    enableWebSearch: agent.enableWebSearch,
-                    responseFormat: agent.response_format,
-                    documents: [], // TODO
-                    roles: agent.roles.map((role, index) => ({
-                        id: `role-${index + 1}`,
-                        name: role.name,
-                        prompt: role.description,
-                        documentAccess: [], // TODO
-                    })),
-                    lastUpdated: agent.last_updated || "unknown",
-                    uploaded: true,
-                } as AgentUIState)
+          (agent) =>
+            ({
+              id: agent.id,
+              databaseId: agent.id,
+              name: agent.name,
+              description: agent.description,
+              systemPrompt: agent.prompt,
+              temperature: agent.llm_temperature,
+              maxTokens: agent.llm_max_tokens,
+              model: {
+                id: 0,
+                name: agent.llm_model,
+                provider: agent.llm_provider,
+                description: "",
+                GDPR_compliant: true,
+              } as LLM,
+              status: agent.status || "inactive",
+              enableMemory: agent.enableMemory,
+              enableWebSearch: agent.enableWebSearch,
+              responseFormat: agent.response_format,
+              documents: dummyDocuments, // TODO
+              roles: agent.roles.map((role, index) => ({
+                id: `role-${index + 1}`,
+                name: role.name,
+                prompt: role.description,
+                documentAccess: [], // TODO
+              })),
+              lastUpdated: agent.last_updated || "unknown",
+              uploaded: true,
+            } as AgentUIState)
         )
     },
 
@@ -222,11 +224,11 @@ export const agentsClient = {
                     name: agent.name,
                     description: agent.description,
                     prompt: agent.systemPrompt,
-                    corpa: this.getCorpa(agent.documents),
+                    corpa: [], // TODO
                     roles: agent.roles.map((role) => ({
                         name: role.name,
                         description: role.prompt,
-                        subset_of_corpa: [], // TODO
+                        subset_of_corpa: role.documentAccess,
                     })),
                     llm_provider: "idun",
                     llm_model: agent.model?.name || "none",
@@ -270,15 +272,5 @@ export const agentsClient = {
             throw new Error(`Failed to fetch agent: ${response.status}`)
         }
         return await response.json()
-    },
-
-    getCorpa(documents: CorpusDocument[]): string[] {
-        let corpa: string[] = []
-        documents.forEach((doc) => {
-            if (doc.content) {
-                corpa.push(doc.content)
-            }
-        })
-        return corpa
     },
 }

@@ -29,7 +29,7 @@ export function RoleEditor({ agent_id, documents = [], onChange }: RoleEditorPro
   const [formData, setFormData] = React.useState({
     name: "",
     prompt: "",
-    documentAccess: [] as string[],
+    documentAccess: [] as number[],
   });
 
   const handleCreateRole = () => {
@@ -105,7 +105,7 @@ const handleSubmit = (e: React.FormEvent) => {
     onChange?.();
 };
 
-  const handleDocumentAccessChange = (documentId: string, checked: boolean) => {
+  const handleDocumentAccessChange = (documentId: number, checked: boolean) => {
     if (checked) {
       setFormData(prev => ({
         ...prev,
@@ -119,8 +119,8 @@ const handleSubmit = (e: React.FormEvent) => {
     }
   };
 
-  const getDocumentName = (documentId: string) => {
-    return documents.find(doc => doc.id === documentId)?.name || documentId;
+  const getDocumentName = (documentId: number) => {
+    return documents.find(doc => doc.id === documentId)?.name || documentId.toString();
   };
 
   return (
@@ -171,7 +171,7 @@ const handleSubmit = (e: React.FormEvent) => {
                 {role.documentAccess.length > 0 && (
                     <div className="flex flex-wrap gap-1 w-full">
                       <p className="text-sm font-medium">Documents:</p>
-                      {role.documentAccess.map((docId: string) => (
+                      {role.documentAccess.map((docId: number) => (
                         <Badge key={docId} variant="secondary" className="text-xs">
                           {getDocumentName(docId)}
                         </Badge>
@@ -237,14 +237,14 @@ const handleSubmit = (e: React.FormEvent) => {
                     {documents.map((document) => (
                       <div key={document.id} className="flex items-center space-x-2">
                         <Checkbox
-                          id={document.id}
+                          id={document.id.toString()}
                           checked={formData.documentAccess.includes(document.id)}
                           onCheckedChange={(checked) => 
                             handleDocumentAccessChange(document.id, checked as boolean)
                           }
                         />
                         <label 
-                          htmlFor={document.id}
+                          htmlFor={document.id.toString()}
                           className="text-sm cursor-pointer flex-1"
                         >
                           <span className="font-medium">{document.name}</span>
