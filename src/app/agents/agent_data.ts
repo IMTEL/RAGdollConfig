@@ -3,11 +3,12 @@ export interface CorpusDocument {
     name: string
     type: string
     size: string
+    content?: string
     uploadDate: string
     status: "processing" | "ready" | "error"
 }
 
-export interface Agent {
+export interface AgentUIState {
     id: string
     databaseId: string // ID from backend
     name: string
@@ -26,7 +27,7 @@ export interface Agent {
     uploaded: boolean // whether the agent has been uploaded to the backend
 }
 
-export function defaultAgent(): Agent {
+export function defaultAgent(): AgentUIState {
     return {
         id: "",
         databaseId: "",
@@ -61,7 +62,7 @@ export interface LLM {
     description: string
 }
 
-const initialState: Agent[] = [
+const initialState: AgentUIState[] = [
     {
         ...defaultAgent(),
         id: "1",
@@ -139,7 +140,7 @@ interface DatabaseAgent {
     name: string
     description: string
     prompt: string
-    corpa: CorpusDocument[]
+    corpa: string[]
     llm_provider: string
     llm_model: string // TODO: Change to LLM model
     llm_temperature: number
@@ -178,7 +179,7 @@ export const agentsClient = {
         }))
     },
 
-    convertFromDB(agents: DatabaseAgent[]): Agent[] {
+    convertFromDB(agents: DatabaseAgent[]): AgentUIState[] {
         return agents.map(
             (agent) =>
                 ({
@@ -209,11 +210,11 @@ export const agentsClient = {
                     })),
                     lastUpdated: agent.last_updated || "unknown",
                     uploaded: true,
-                } as Agent)
+                } as AgentUIState)
         )
     },
 
-    convertToDB(agents: Agent[]): DatabaseAgent[] {
+    convertToDB(agents: AgentUIState[]): DatabaseAgent[] {
         return agents.map(
             (agent) =>
                 ({
@@ -221,7 +222,7 @@ export const agentsClient = {
                     name: agent.name,
                     description: agent.description,
                     prompt: agent.systemPrompt,
-                    corpa: [], // TODO
+                    corpa: this.getCorpa(agent.documents),
                     roles: agent.roles.map((role) => ({
                         name: role.name,
                         description: role.prompt,
@@ -244,7 +245,7 @@ export const agentsClient = {
         )
     },
 
-    async updateAgent(agent: Agent): Promise<Agent> {
+    async updateAgent(agent: AgentUIState): Promise<AgentUIState> {
         const response = await fetch(`${backend_api_url}/agents/`, {
             method: "POST",
             headers: {
@@ -258,7 +259,7 @@ export const agentsClient = {
         return await this.convertFromDB([await response.json()])[0]
     },
     // Get an agent by ID
-    async getAgentById(agentId: string): Promise<Agent> {
+    async getAgentById(agentId: string): Promise<AgentUIState> {
         const response = await fetch(`${backend_api_url}/agents/${agentId}`, {
             method: "GET",
             headers: {
@@ -269,5 +270,15 @@ export const agentsClient = {
             throw new Error(`Failed to fetch agent: ${response.status}`)
         }
         return await response.json()
+    },
+
+    getCorpa(documents: CorpusDocument[]): string[] {
+        let corpa: string[] = []
+        documents.forEach((doc) => {
+            if (doc.content) {
+                corpa.push(doc.content)
+            }
+        })
+        return corpa
     },
 }

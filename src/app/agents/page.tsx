@@ -6,11 +6,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AgentModal } from "@/components/ui/modal";
 import { useState } from "react";
 import Link from "next/link";
-import { Agent, defaultAgent } from "./agent_data";
+import { AgentUIState, defaultAgent } from "./agent_data";
 import { useAgents, useAgentActions } from "./agent_provider";
 
 interface AgentCardProps {
-  agent: Agent;
+  agent: AgentUIState;
 }
 
 function AgentCard({ agent }: AgentCardProps) {
@@ -97,7 +97,7 @@ function AgentsPageContent() {
               databaseId: "",
               name: agent.name,
               description: agent.description,
-            } as Agent,
+            } as AgentUIState,
           ]);
           setModalOpen(false);
         }}

@@ -39,7 +39,7 @@ import {
   SelectModel,
 } from "@/components/agent-configuration/select-model";
 import { RoleEditor } from "@/components/agent-configuration/role-editor";
-import { Agent, agentsClient, CorpusDocument, LLM } from "../agent_data";
+import { AgentUIState, agentsClient, CorpusDocument, LLM } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 
 const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001/";
@@ -60,43 +60,50 @@ export default function AgentConfigurationPage({
     return <div> Agent not found </div>;
   }
 
+  const registerUpdate = () => {
+    const last_updated = new Date().toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" });
+    setAgent(agent.id, (prev) => ({ ...prev, uploaded: false, lastUpdated: last_updated }));
+  }
+
   const [dragActive, setDragActive] = useState(false);
 
   const handleInputChange = (
-    field: keyof Agent,
+    field: keyof AgentUIState,
     value: string | number | boolean | null
   ) => {
-    agent.uploaded = false;
+    registerUpdate()
     setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
   };
 
   const handleFileUpload = useCallback((files: FileList) => {
-    agent.uploaded = false;
+    registerUpdate()
     const newDocuments: CorpusDocument[] = Array.from(files).map((file, index) => ({
       id: `doc-${Date.now()}-${index}`,
       name: file.name,
       type: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
-      size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      size: `${(file.size / 1024).toFixed(1)} KB`,
       uploadDate: new Date().toISOString().split("T")[0],
       status: "processing" as const,
     }));
 
     setDocuments(agent.id, (prev) => [...prev, ...newDocuments]);
 
-    // Simulate processing
-    setTimeout(() => {
-      setDocuments(agent.id, (prev) => 
-        prev.map((doc) =>
-          newDocuments.some((newDoc) => newDoc.id === doc.id)
-            ? { ...doc, status: "ready" as const }
-            : doc
-        )
-      );
-    }, 2000);
+    // temp: read directly as text
+    Array.from(files).forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target?.result;
+            if (typeof content === "string") {
+                console.log(`Read content of ${file.name}:`, content.slice(0, 100));
+                setDocuments(agent.id, (prev) => prev.map(doc => doc.id === newDocuments[index].id ? { ...doc, content, status: "ready" } : doc));
+            }
+        };
+        reader.readAsText(file);
+    });
   }, []);
 
   const handleDocumentDelete = (documentId: string) => {
-    agent.uploaded = false;
+    registerUpdate()
     setAgent(agent.id, (prev) => ({
       ...prev,
       documents: prev.documents.filter((doc) => doc.id !== documentId),
@@ -169,6 +176,7 @@ export default function AgentConfigurationPage({
         <div className="ml-auto flex gap-2">
           <Button
             variant="outline"
+            disabled={!agent.uploaded}
             onClick={handleTestAgent}
           >
             <Bot className="mr-2 h-4 w-4" />

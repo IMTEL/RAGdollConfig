@@ -1,10 +1,10 @@
 import { createContext, ReactNode, useContext, useReducer, useEffect, useState } from "react";
-import { Agent, agentsClient, CorpusDocument, Role } from "./agent_data";
+import { AgentUIState, agentsClient, CorpusDocument, Role } from "./agent_data";
 
 // save state to localStorage to make it persistent across reloads
 const STORAGE_KEY = 'ragdoll-agents';
 
-const loadFromStorage = (): Agent[] => {
+const loadFromStorage = (): AgentUIState[] => {
   if (typeof window === 'undefined') return [];
   
   try {
@@ -18,7 +18,7 @@ const loadFromStorage = (): Agent[] => {
   return [];
 };
 
-const saveToStorage = (agents: Agent[]) => {
+const saveToStorage = (agents: AgentUIState[]) => {
   if (typeof window === 'undefined') return;
   
   try {
@@ -29,14 +29,14 @@ const saveToStorage = (agents: Agent[]) => {
 };
 
 type AgentAction =
-  | { type: 'SET_AGENTS'; payload: (prev: Agent[]) => Agent[] }
-  | { type: 'SET_AGENT'; payload: { agentId: string; update: (prev: Agent) => Agent } }
+  | { type: 'SET_AGENTS'; payload: (prev: AgentUIState[]) => AgentUIState[] }
+  | { type: 'SET_AGENT'; payload: { agentId: string; update: (prev: AgentUIState) => AgentUIState } }
   | { type: 'SET_DOCUMENTS'; payload: { agentId: string; update: (prev: CorpusDocument[]) => CorpusDocument[] } }
   | { type: 'SET_ROLES'; payload: { agentId: string; update: (prev: Role[]) => Role[] } }
   | { type: 'SET_ROLE'; payload: { agentId: string; roleId: string; update: ( prev: Role) => Role } };
 
 
-function agentReducer(state: Agent[], action: AgentAction): Agent[] {
+function agentReducer(state: AgentUIState[], action: AgentAction): AgentUIState[] {
   switch (action.type) {
     case 'SET_AGENTS':
       return action.payload(state);
@@ -45,14 +45,14 @@ function agentReducer(state: Agent[], action: AgentAction): Agent[] {
     case 'SET_DOCUMENTS':
         return state.map(agent => {
             if (agent.id === action.payload.agentId) {
-                return { ...agent, documents: action.payload.update(agent.documents) } as Agent;
+                return { ...agent, documents: action.payload.update(agent.documents) } as AgentUIState;
             }
             return agent;
         });
     case 'SET_ROLES':
         return state.map(agent => {
             if (agent.id === action.payload.agentId) {
-                return { ...agent, roles: action.payload.update((agent as any).roles || []) } as Agent;
+                return { ...agent, roles: action.payload.update((agent as any).roles || []) } as AgentUIState;
             }
             return agent;
         });
@@ -63,7 +63,7 @@ function agentReducer(state: Agent[], action: AgentAction): Agent[] {
                 return { 
                     ...agent, 
                     roles: roles.map((role: Role) => role.id === action.payload.roleId ? action.payload.update(role) : role)
-                } as Agent;
+                } as AgentUIState;
             }
             return agent;
         });
@@ -74,7 +74,7 @@ function agentReducer(state: Agent[], action: AgentAction): Agent[] {
 }
 
 const AgentContext = createContext<{
-  state: Agent[];
+  state: AgentUIState[];
   dispatch: React.Dispatch<AgentAction>;
   isLoading: boolean;
 } | null>(null);
@@ -131,10 +131,10 @@ export function useAgentActions() {
   const { dispatch, state } = useAgents();
 
   return {
-    setAgents: (update: (prev: Agent[]) => Agent[]) => {
+    setAgents: (update: (prev: AgentUIState[]) => AgentUIState[]) => {
       dispatch({ type: 'SET_AGENTS', payload: update });
     },
-    setAgent: (agentId: string, update: (prev: Agent) => Agent) => {
+    setAgent: (agentId: string, update: (prev: AgentUIState) => AgentUIState) => {
       dispatch({ type: 'SET_AGENT', payload: { agentId, update } });
     },
     setDocuments: (agentId: string, update: (prev: CorpusDocument[]) => CorpusDocument[]) => {
