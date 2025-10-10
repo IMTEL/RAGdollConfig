@@ -15,9 +15,10 @@ import { useAgentActions, useAgents } from "@/app/agents/agent_provider";
 interface RoleEditorProps {
   agent_id: string;
   documents?: CorpusDocument[];
+  onChange?: () => void;
 }
 
-export function RoleEditor({ agent_id, documents = [] }: RoleEditorProps) {
+export function RoleEditor({ agent_id, documents = [], onChange }: RoleEditorProps) {
   const { setRoles } = useAgentActions();
   const { state } = useAgents();
   const agent = state.find(a => a.id === agent_id);
@@ -55,33 +56,54 @@ export function RoleEditor({ agent_id, documents = [] }: RoleEditorProps) {
     setRoles(agent_id, roles => roles.filter(role => role.id !== roleId));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
+        window.alert("Role name is required");
+        return;
+    }
+
+    const normalized = trimmedName.toLowerCase();
+    const isDuplicate = agent.roles.some(
+        (r) =>
+            r.name.trim().toLowerCase() === normalized &&
+            (!editingRole || r.id !== editingRole.id)
+    );
+
+    if (isDuplicate) {
+        window.alert("Role name must be unique");
+        return;
+    }
     
     if (editingRole) {
-      // Update existing role
-      setRoles(agent_id, roles => roles.map(role => 
-        role.id === editingRole.id 
-          ? { ...role, ...formData }
-          : role
-      ));
+        // Update existing role
+        setRoles(agent_id, roles => roles.map(role => 
+            role.id === editingRole.id 
+                ? { ...role, ...formData, name: trimmedName }
+                : role
+        ));
     } else {
-      // Create new role
-      const newRole: Role = {
-        id: Date.now().toString(),
-        ...formData,
-      };
-      setRoles(agent_id, roles => [...roles, newRole]);
+        // Create new role
+        const newRole: Role = {
+            id: Date.now().toString(),
+            ...formData,
+            name: trimmedName,
+        };
+        setRoles(agent_id, roles => [...roles, newRole]);
     }
     
     setIsModalOpen(false);
     setEditingRole(null);
     setFormData({
-      name: "",
-      prompt: "",
-      documentAccess: [],
+        name: "",
+        prompt: "",
+        documentAccess: [],
     });
-  };
+
+    onChange?.();
+};
 
   const handleDocumentAccessChange = (documentId: string, checked: boolean) => {
     if (checked) {

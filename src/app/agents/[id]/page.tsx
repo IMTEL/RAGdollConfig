@@ -451,7 +451,7 @@ export default function AgentConfigurationPage({
         </TabsContent>
 
         <TabsContent value="roles">
-            <RoleEditor documents={agent.documents} agent_id={agent.id} />
+            <RoleEditor documents={agent.documents} agent_id={agent.id} onChange={registerUpdate} />
         </TabsContent>
 
         <TabsContent value="model">
@@ -468,7 +468,11 @@ export default function AgentConfigurationPage({
                   <Label htmlFor="model">Model</Label>
                   <SelectModel
                     selectedModel={agent.model}
-                    onChange={(model) => setAgent(agent.id, (a) => ({ ...a, model }))}
+                    onChange={(model) => {
+                        console.log("Selected model:", model);
+                        registerUpdate();
+                        setAgent(agent.id, (a) => ({ ...a, model }))
+                    }}
                   />
                 </div>
                 <div className="grid gap-2">
