@@ -38,11 +38,6 @@ const navigationItems = [
     url: "/agents",
     icon: Bot,
   },
-  {
-    title: "API Keys",
-    url: "/api-keys",
-    icon: Key,
-  },
 ];
 
 export function AppSidebar() {

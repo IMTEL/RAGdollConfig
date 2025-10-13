@@ -6,14 +6,16 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL;
 
+export interface AccessKeyPageProps {
+  agentId : string
+}
 
-export default function AccessKeysPage() {
+
+export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
 
   const [showAccessKeyModal, setShowAccessKeyModal] = useState<boolean>(false)
   const [accessKeys, setAccessKeys] = useState<AccessKey[]>([])
   // Todo : to be fixed in a larger refactor by mathias, hardcoded for now
-
-  const agentId = ""
 
   useEffect(() => {
     const getAccessKeys = async () => {
@@ -65,7 +67,6 @@ export default function AccessKeysPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Access Keys</h1>
           <p className="text-muted-foreground">
             Manage your Access keys
           </p>

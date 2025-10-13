@@ -11,6 +11,7 @@ import {
   Trash2,
   Calendar,
   Drama,
+  Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ import {
 import { RoleEditor } from "@/components/agent-configuration/role-editor";
 import { AgentUIState, agentsClient, CorpusDocument, LLM } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
+import AccessKeysPage from "@/components/agent-configuration/access-key-page";
 
 const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001/";
 
@@ -198,7 +200,7 @@ export default function AgentConfigurationPage({
 
       {/* Tabs */}
       <Tabs defaultValue="description" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="description" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
             Description
@@ -214,6 +216,10 @@ export default function AgentConfigurationPage({
           <TabsTrigger value="model" className="flex items-center gap-2">
             <Bot className="w-4 h-4" />
             Model
+          </TabsTrigger>
+                    <TabsTrigger value="accesskeys" className="flex items-center gap-2">
+            <Key className="w-4 h-4" />
+            Access Keys
           </TabsTrigger>
         </TabsList>
 
@@ -453,6 +459,12 @@ export default function AgentConfigurationPage({
         <TabsContent value="roles">
             <RoleEditor documents={agent.documents} agent_id={agent.id} onChange={registerUpdate} />
         </TabsContent>
+
+        <TabsContent value="accesskeys">
+        <AccessKeysPage agentId={agent.id}/>
+        </TabsContent>
+
+
 
         <TabsContent value="model">
           <div className="space-y-6">
