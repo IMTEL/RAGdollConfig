@@ -4,10 +4,10 @@ import { AccessKeyModal } from "@/components/agent-configuration/access-key-moda
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL;
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL
 
 export interface AccessKeyPageProps {
-  agentId : string
+  agentId: string
 }
 
 
@@ -21,7 +21,7 @@ export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
     const getAccessKeys = async () => {
       const params = new URLSearchParams({ agent_id: agentId });
 
-      const response = await fetch(RAGDOLL_BASE_URL + `/get-accesskeys?${params.toString()}`, {
+      const response = await fetch(BACKEND_API_URL + `/get-accesskeys?${params.toString()}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -32,12 +32,12 @@ export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
         console.error("Could not fetch  access-keys : " + response.status.toString())
         return
       }
-      
+
       try {
-            const accessKey = await response.json() as AccessKey[]
-            setAccessKeys(accessKey)
+        const accessKey = await response.json() as AccessKey[]
+        setAccessKeys(accessKey)
       } catch (e) {
-            console.error("Failed to fetch access key:", response.statusText);
+        console.error("Failed to fetch access key:", response.statusText);
       }
     }
     getAccessKeys()

@@ -23,7 +23,7 @@ const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL;
 
 const Schema = z.object({
     name: z.string().min(1, "Please enter a name."),
-    expiery_date: z.date({ error: "Please pick your date of birth." }),
+    expiery_date: z.date({ error: "Please pick an expiry date" }),
 });
 
 type FormValues = z.infer<typeof Schema>;
