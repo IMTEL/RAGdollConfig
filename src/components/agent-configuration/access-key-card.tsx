@@ -9,7 +9,7 @@ export interface AccessKey {
     id: string | null
     key: string | null
     name: string | null
-    expiery_date: Date | null
+    expiry_date: Date | null
     created: Date | null
     last_use: Date | null
 }
@@ -26,8 +26,8 @@ export function AccessKeyCard({ accessKey, onRevoke, agentId }: AccessKeyCardPro
 
 
     const getStatus = () => {
-        if (!accessKey.expiery_date) return true
-        return accessKey.expiery_date.getTime() < Date.now()
+        if (!accessKey.expiry_date) return true
+        return new Date(accessKey.expiry_date).getTime() > Date.now()
     }
 
     const tryRevokeKey = async () => {
@@ -101,8 +101,9 @@ export function AccessKeyCard({ accessKey, onRevoke, agentId }: AccessKeyCardPro
             </div>
 
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                <div>Expiry date: {accessKey?.expiry_date ? new Date(accessKey.expiry_date).toDateString() : "None"}</div>
                 <div>Created: {accessKey?.created ? new Date(accessKey.created).toDateString() : ""}</div>
-                <div>Last used: {accessKey?.last_use ? new Date(accessKey.last_use).toDateString() : ""}</div>
+                <div>Last used: {accessKey?.last_use ? new Date(accessKey.last_use).toDateString() : "Never used"}</div>
                 <div className="flex gap-1">
                 </div>
             </div>
