@@ -3,7 +3,7 @@ import { Bot, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AgentModal } from "@/components/ui/modal";
+import { AgentModal } from "@/components/agent-configuration/create-agent-modal";
 import { useState } from "react";
 import Link from "next/link";
 import { AgentUIState, defaultAgent } from "./agent_data";
@@ -90,14 +90,7 @@ function AgentsPageContent() {
         onClose={() => setModalOpen(false)}
         onCreate={(agent) => {
           setAgents((prevAgents) => [
-            ...prevAgents,
-            {
-              ...defaultAgent(),
-              id: (prevAgents.length + 1).toString(),
-              databaseId: "",
-              name: agent.name,
-              description: agent.description,
-            } as AgentUIState,
+            ...prevAgents,agent
           ]);
           setModalOpen(false);
         }}

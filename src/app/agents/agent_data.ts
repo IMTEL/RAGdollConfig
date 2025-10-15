@@ -247,6 +247,13 @@ export const agentsClient = {
         )
     },
 
+    async createNewAgent(name : string, description : string): Promise<AgentUIState> {
+      const agent = defaultAgent()
+      agent.name = name
+      agent.description = description
+      return this.updateAgent(agent)
+    },
+
     async updateAgent(agent: AgentUIState): Promise<AgentUIState> {
         const response = await fetch(`${backend_api_url}/agents/`, {
             method: "POST",
