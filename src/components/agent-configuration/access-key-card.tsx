@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Eye, Key } from "lucide-react";
 import { useState } from "react";
 import { fa } from "zod/v4/locales";
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL;
+const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000"
 
 export interface AccessKey {
     id: string | null

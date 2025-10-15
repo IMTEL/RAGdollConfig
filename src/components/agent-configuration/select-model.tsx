@@ -30,7 +30,7 @@ interface SelectAgentProps {
   onChange?: (model: LLM | null) => void;
 }
 
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000/";
+const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
 
 export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
   const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
@@ -38,7 +38,7 @@ export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
   const [models, setModels] = useState<LLM[]>([]);
 
   useEffect(() => {
-    fetch(RAGDOLL_BASE_URL + "get_models")
+    fetch(RAGDOLL_BASE_URL + "/get_models")
       .then((response) => response.json())
       .then((data) => {
         //console.log(data);

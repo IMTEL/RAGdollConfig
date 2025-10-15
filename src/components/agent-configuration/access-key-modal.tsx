@@ -21,7 +21,7 @@ import { AccessKey } from "./access-key-card";
 import { useRef, useState } from "react";
 import { Label } from "../ui/label";
 
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL;
+const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000"
 
 export function AccessKeyModal({
   open,
@@ -116,7 +116,7 @@ export function AccessKeyModal({
           />
 
           <Label htmlFor="date" className="px-1">
-            Expiry date
+            Expiry date (optional)
           </Label>
           <Popover open={dateOpen} onOpenChange={setDateOpen}>
             <PopoverTrigger asChild>

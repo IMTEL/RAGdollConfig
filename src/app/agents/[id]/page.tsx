@@ -217,13 +217,15 @@ export default function AgentConfigurationPage({
             <Bot className="w-4 h-4" />
             Model
           </TabsTrigger>
-                    <TabsTrigger value="accesskeys" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="accesskeys" 
+            className="flex items-center gap-2"
+            disabled={agent.databaseId.length < 5}
+          >
             <Key className="w-4 h-4" />
             Access Keys
           </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="description">
+        </TabsList>        <TabsContent value="description">
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -461,7 +463,7 @@ export default function AgentConfigurationPage({
         </TabsContent>
 
         <TabsContent value="accesskeys">
-        <AccessKeysPage agentId={agent.id}/>
+            <AccessKeysPage agentId={agent.id}/>
         </TabsContent>
 
 
