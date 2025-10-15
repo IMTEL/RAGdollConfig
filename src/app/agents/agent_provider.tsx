@@ -1,33 +1,6 @@
 import { createContext, ReactNode, useContext, useReducer, useEffect, useState } from "react";
 import { AgentUIState, agentsClient, CorpusDocument, Role } from "./agent_data";
 
-// save state to localStorage to make it persistent across reloads
-const STORAGE_KEY = 'ragdoll-agents';
-
-const loadFromStorage = (): AgentUIState[] => {
-  if (typeof window === 'undefined') return [];
-  
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Failed to load agents from localStorage:', error);
-  }
-  return [];
-};
-
-const saveToStorage = (agents: AgentUIState[]) => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(agents));
-  } catch (error) {
-    console.error('Failed to save agents to localStorage:', error);
-  }
-};
-
 type AgentAction =
   | { type: 'SET_AGENTS'; payload: (prev: AgentUIState[]) => AgentUIState[] }
   | { type: 'SET_AGENT'; payload: { agentId: string; update: (prev: AgentUIState) => AgentUIState } }
@@ -83,34 +56,18 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(agentReducer, []);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load from localStorage after hydration
   useEffect(() => {
-    const storedAgents = loadFromStorage();
-    // if (storedAgents !== initialState) {
-    //   dispatch({ type: 'SET_AGENTS', payload: () => storedAgents });
-    // }
 
     agentsClient.getAll().then(databaseContent => {
         let agents = agentsClient.convertFromDB(databaseContent);
-        storedAgents.forEach(storedAgent => {
-            if (!agents.find(a => a.databaseId === storedAgent.databaseId)) {
-                agents.push(storedAgent);
-            }
-        });
         dispatch({ type: 'SET_AGENTS', payload: () => agents });
         setIsLoading(false);
     }).catch(error => {
         console.error('Failed to load agents:', error);
-        // Still set loading to false even on error, and use stored agents
-        dispatch({ type: 'SET_AGENTS', payload: () => storedAgents });
+        dispatch({ type: 'SET_AGENTS', payload: () => [] });
         setIsLoading(false);
     });
   }, []);
-
-  // Save to localStorage whenever state changes
-  useEffect(() => {
-    saveToStorage(state);
-  }, [state]);
 
   return (
     <AgentContext.Provider value={{ state, dispatch, isLoading }}>
