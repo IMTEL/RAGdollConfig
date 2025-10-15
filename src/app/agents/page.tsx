@@ -15,32 +15,32 @@ interface AgentCardProps {
 
 function AgentCard({ agent }: AgentCardProps) {
   return (
-    <div className="rounded-lg border p-6 space-y-4 hover:bg-accent/50 transition-colors">
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-muted-foreground" />
-            <h3 className="text-lg font-semibold">{agent.name}</h3>
-            <Badge
-              variant={agent.status === "active" ? "default" : "secondary"}
-            >
-              {agent.status}
-            </Badge>
+    <Link href={`/agents/${agent.id}`}>
+      <div className="rounded-lg border p-6 space-y-4 hover:bg-accent/50 transition-colors">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-muted-foreground" />
+              <h3 className="text-lg font-semibold">{agent.name}</h3>
+              <Badge
+                variant={agent.status === "active" ? "default" : "secondary"}
+              >
+                {agent.status}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">{agent.description}</p>
           </div>
-          <p className="text-muted-foreground">{agent.description}</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/agents/${agent.id}`}>
+          <div className="flex gap-2">
             <Button variant="outline" size="sm">
               Configure
             </Button>
-          </Link>
+          </div>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Last updated {agent.lastUpdated}
         </div>
       </div>
-      <div className="text-sm text-muted-foreground">
-        Last updated {agent.lastUpdated}
-      </div>
-    </div>
+    </Link>
   );
 }
 
