@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -157,6 +157,17 @@ export default function AgentConfigurationPage({
       alert('Failed to launch chat interface. Please try again.');
     }
   };
+
+  // Determine temperature max based on model provider
+  const tempMax = agent.model?.provider?.toLowerCase() === "idun" ? 2 : 1;
+
+  // Clamp temperature if it exceeds the allowed max for the selected model
+  useEffect(() => {
+    if (typeof agent.temperature === "number" && agent.temperature > tempMax) {
+      registerUpdate();
+      setAgent(agent.id, (prev) => ({ ...prev, temperature: tempMax }));
+    }
+  }, [tempMax, agent.temperature, agent.id]);
 
   return (
     <div className="space-y-6">
@@ -483,7 +494,7 @@ export default function AgentConfigurationPage({
                     id="temperature"
                     type="range"
                     min="0"
-                    max="2"
+                    max={tempMax}
                     step="0.1"
                     value={agent.temperature}
                     onChange={(e) =>
