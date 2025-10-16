@@ -52,7 +52,7 @@ export interface Role {
     id: string
     name: string
     prompt: string
-    documentAccess: number[] // Array of document IDs
+    documentAccess: string[] // Array of document IDs
 }
 
 export interface LLM {
@@ -88,7 +88,7 @@ interface DatabaseAgent {
 interface DatabaseRole {
     name: string
     description: string
-    subset_of_corpa: number[]
+    document_access: string[]
 }
 
 export const agentsClient = {
@@ -134,7 +134,7 @@ export const agentsClient = {
                 id: `role-${index + 1}`,
                 name: role.name,
                 prompt: role.description,
-                documentAccess: [], // TODO
+                documentAccess: role.document_access,
               })),
               lastUpdated: agent.last_updated || "unknown",
               uploaded: true,
@@ -153,7 +153,7 @@ export const agentsClient = {
                     roles: agent.roles.map((role) => ({
                         name: role.name,
                         description: role.prompt,
-                        subset_of_corpa: role.documentAccess,
+                        document_access: role.documentAccess,
                     })),
                     llm_provider: "idun",
                     llm_model: agent.model?.name || "none",
