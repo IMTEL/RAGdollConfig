@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -40,11 +40,12 @@ import {
   SelectModel,
 } from "@/components/agent-configuration/select-model";
 import { RoleEditor } from "@/components/agent-configuration/role-editor";
-import { AgentUIState, agentsClient, CorpusDocument, LLM } from "../agent_data";
+import { AgentUIState, agentsClient, DocumentMetadata, LLM } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
 
 const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001/";
+const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000/";
 
 export default function AgentConfigurationPage({
   params,
@@ -62,6 +63,22 @@ export default function AgentConfigurationPage({
     return <div> Agent not found </div>;
   }
 
+  // Load documents when the page opens
+  useEffect(() => {
+    // Only fetch if agent has a database ID and documents haven't been loaded yet
+    if (agent.databaseId && agent.documents === null) {
+      agentsClient.getDocumentsForAgent(agent.databaseId)
+        .then((documents) => {
+          setAgent(agent.id, (prev) => ({ ...prev, documents }));
+        })
+        .catch((error) => {
+          console.error("Failed to load documents:", error);
+          // Set to empty array on error so we don't keep retrying
+          setAgent(agent.id, (prev) => ({ ...prev, documents: [] }));
+        });
+    }
+  }, [agent.databaseId, agent.documents, agent.id, setAgent]);
+
   const registerUpdate = () => {
     const last_updated = new Date().toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" });
     setAgent(agent.id, (prev) => ({ ...prev, uploaded: false, lastUpdated: last_updated }));
@@ -77,10 +94,14 @@ export default function AgentConfigurationPage({
     setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = useCallback((files: FileList) => {
-    registerUpdate()
-    const newDocuments: CorpusDocument[] = Array.from(files).map((file, index) => ({
-      id: agent.documents.length + 1 + index,
+  const handleFileUpload = useCallback(async (files: FileList) => {
+    registerUpdate();
+    
+    // Create temporary IDs for UI tracking
+    const tempIds = Array.from(files).map((_, index) => `temp-${Date.now()}-${index}`);
+    
+    const newDocuments: DocumentMetadata[] = Array.from(files).map((file, index) => ({
+      id: tempIds[index],
       name: file.name,
       type: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
       size: `${(file.size / 1024).toFixed(1)} KB`,
@@ -88,28 +109,88 @@ export default function AgentConfigurationPage({
       status: "processing" as const,
     }));
 
+    // Add documents to UI immediately
     setDocuments(agent.id, (prev) => [...prev, ...newDocuments]);
 
-    // temp: read directly as text
-    Array.from(files).forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target?.result;
-            if (typeof content === "string") {
-                console.log(`Read content of ${file.name}:`, content.slice(0, 100));
-                setDocuments(agent.id, (prev) => prev.map(doc => doc.id === newDocuments[index].id ? { ...doc, content, status: "ready" } : doc));
-            }
-        };
-        reader.readAsText(file);
-    });
-  }, []);
+    // Upload each file to the backend
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("access_key", ""); // TODO: Replace with actual access key
+      formData.append("categories", "General Information"); // TODO: Replace with actual categories
 
-  const handleDocumentDelete = (documentId: number) => {
-    registerUpdate()
-    setAgent(agent.id, (prev) => ({
-      ...prev,
-      documents: prev.documents.filter((doc) => doc.id !== documentId),
-    }));
+      try {
+        const response = await fetch(
+          `${RAGDOLL_BASE_URL}upload/agent/${agent.databaseId}`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log(`Successfully uploaded ${file.name}:`, result);
+
+        // Update document with actual ID from backend and set status to ready
+        setDocuments(agent.id, (prev) =>
+          prev.map((doc) =>
+            doc.id === tempIds[index]
+              ? { ...doc, id: result.document_id, status: "ready" as const }
+              : doc
+          )
+        );
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+        // Update document status to error
+        setDocuments(agent.id, (prev) =>
+          prev.map((doc) =>
+            doc.id === tempIds[index]
+              ? { ...doc, status: "error" as const }
+              : doc
+          )
+        );
+      }
+    }
+  }, [agent.id, agent.databaseId]);
+
+  const handleDocumentDelete = async (documentId: string) => {
+    if (!documentId) {
+      console.error("Cannot delete document: no ID provided");
+      return;
+    }
+
+    // Confirm deletion
+    if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      // Optimistically remove from UI
+      setAgent(agent.id, (prev) => ({
+        ...prev,
+        documents: prev.documents && prev.documents.filter((doc) => doc.id !== documentId),
+      }));
+
+      // Call backend to delete
+      await agentsClient.deleteDocument(documentId);
+      
+      registerUpdate();
+      console.log(`Successfully deleted document ${documentId}`);
+    } catch (error) {
+      console.error("Failed to delete document:", error);
+      alert("Failed to delete document. Please try again.");
+      
+      // Reload documents to restore UI state
+      if (agent.databaseId) {
+        const documents = await agentsClient.getDocumentsForAgent(agent.databaseId);
+        setAgent(agent.id, (prev) => ({ ...prev, documents }));
+      }
+    }
   };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -176,11 +257,7 @@ export default function AgentConfigurationPage({
           </div>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button
-            variant="outline"
-            disabled={!agent.uploaded}
-            onClick={handleTestAgent}
-          >
+          <Button variant="outline" disabled={!agent.uploaded} onClick={handleTestAgent}>
             <Bot className="mr-2 h-4 w-4" />
             Test Agent
           </Button>
@@ -217,22 +294,21 @@ export default function AgentConfigurationPage({
             <Bot className="w-4 h-4" />
             Model
           </TabsTrigger>
-          <TabsTrigger 
-            value="accesskeys" 
+          <TabsTrigger
+            value="accesskeys"
             className="flex items-center gap-2"
             disabled={agent.databaseId.length < 5}
           >
             <Key className="w-4 h-4" />
             Access Keys
           </TabsTrigger>
-        </TabsList>        <TabsContent value="description">
+        </TabsList>{" "}
+        <TabsContent value="description">
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
-                <CardDescription>
-                  Configure the basic settings for your agent
-                </CardDescription>
+                <CardDescription>Configure the basic settings for your agent</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
@@ -249,9 +325,7 @@ export default function AgentConfigurationPage({
                   <Textarea
                     id="description"
                     value={agent.description}
-                    onChange={(e) =>
-                      handleInputChange("description", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("description", e.target.value)}
                     placeholder="Describe what this agent does"
                     rows={3}
                   />
@@ -261,9 +335,7 @@ export default function AgentConfigurationPage({
                   <Textarea
                     id="system-prompt"
                     value={agent.systemPrompt}
-                    onChange={(e) =>
-                      handleInputChange("systemPrompt", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("systemPrompt", e.target.value)}
                     placeholder="Define the agent's personality and behavior"
                     rows={8}
                   />
@@ -285,10 +357,7 @@ export default function AgentConfigurationPage({
                     id="status"
                     checked={agent.status === "active"}
                     onCheckedChange={(checked) =>
-                      handleInputChange(
-                        "status",
-                        checked ? "active" : "inactive"
-                      )
+                      handleInputChange("status", checked ? "active" : "inactive")
                     }
                   />
                 </div>
@@ -303,39 +372,31 @@ export default function AgentConfigurationPage({
                   <Switch
                     id="memory"
                     checked={agent.enableMemory}
-                    onCheckedChange={(checked) =>
-                      handleInputChange("enableMemory", checked)
-                    }
+                    onCheckedChange={(checked) => handleInputChange("enableMemory", checked)}
                   />
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="web-search">Web Search</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Search the web for information
-                    </p>
+                    <p className="text-xs text-muted-foreground">Search the web for information</p>
                   </div>
                   <Switch
                     id="web-search"
                     checked={agent.enableWebSearch}
-                    onCheckedChange={(checked) =>
-                      handleInputChange("enableWebSearch", checked)
-                    }
+                    onCheckedChange={(checked) => handleInputChange("enableWebSearch", checked)}
                   />
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
-
         <TabsContent value="corpus">
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Knowledge Base Documents</CardTitle>
                 <CardDescription>
-                  Upload and manage documents for this agent&apos;s knowledge
-                  base
+                  Upload and manage documents for this agent&apos;s knowledge base
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -352,12 +413,8 @@ export default function AgentConfigurationPage({
                 >
                   <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <div className="space-y-2">
-                    <p className="text-lg font-medium">
-                      Drag and drop files here
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      or click to browse files
-                    </p>
+                    <p className="text-lg font-medium">Drag and drop files here</p>
+                    <p className="text-sm text-muted-foreground">or click to browse files</p>
                     <input
                       type="file"
                       multiple
@@ -365,16 +422,14 @@ export default function AgentConfigurationPage({
                       id="file-upload"
                       onChange={(e) => {
                         if (e.target.files?.length) {
-                          handleFileUpload(e.target.files);
+                          handleFileUpload(e.target.files)
                         }
                       }}
                       accept=".pdf,.doc,.docx,.txt,.md"
                     />
                     <Button
                       variant="outline"
-                      onClick={() =>
-                        document.getElementById("file-upload")?.click()
-                      }
+                      onClick={() => document.getElementById("file-upload")?.click()}
                       className="mt-4"
                     >
                       <Upload className="mr-2 h-4 w-4" />
@@ -387,7 +442,11 @@ export default function AgentConfigurationPage({
                 </div>
 
                 {/* Documents Table */}
-                {agent.documents.length > 0 && (
+                {agent.documents === null ? (
+                  <div className="flex items-center justify-center p-8 border rounded-lg">
+                    <div className="text-muted-foreground">Loading documents...</div>
+                  </div>
+                ) : agent.documents.length > 0 ? (
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium">
                       Uploaded Documents ({agent.documents.length})
@@ -407,10 +466,7 @@ export default function AgentConfigurationPage({
                         >
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span
-                              className="text-sm truncate"
-                              title={document.name}
-                            >
+                            <span className="text-sm truncate" title={document.name}>
                               {document.name}
                             </span>
                           </div>
@@ -419,9 +475,7 @@ export default function AgentConfigurationPage({
                               {document.type}
                             </Badge>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {document.size}
-                          </div>
+                          <div className="text-sm text-muted-foreground">{document.size}</div>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             {document.uploadDate}
@@ -442,7 +496,7 @@ export default function AgentConfigurationPage({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDocumentDelete(document.id)}
+                              onClick={() => document.id && handleDocumentDelete(document.id)}
                               className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                             >
                               <Trash2 className="h-3 w-3" />
@@ -452,30 +506,31 @@ export default function AgentConfigurationPage({
                       ))}
                     </div>
                   </div>
+                ) : (
+                  <div className="flex items-center justify-center p-8 border rounded-lg">
+                    <div className="text-muted-foreground">No documents uploaded yet.</div>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </div>
         </TabsContent>
-
         <TabsContent value="roles">
-            <RoleEditor documents={agent.documents} agent_id={agent.id} onChange={registerUpdate} />
+          <RoleEditor
+            documents={agent.documents ?? []}
+            agent_id={agent.id}
+            onChange={registerUpdate}
+          />
         </TabsContent>
-
         <TabsContent value="accesskeys">
-            <AccessKeysPage agentId={agent.id}/>
+          <AccessKeysPage agentId={agent.id} />
         </TabsContent>
-
-
-
         <TabsContent value="model">
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Model Configuration</CardTitle>
-                <CardDescription>
-                  Configure the AI model and generation parameters
-                </CardDescription>
+                <CardDescription>Configure the AI model and generation parameters</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
@@ -483,16 +538,14 @@ export default function AgentConfigurationPage({
                   <SelectModel
                     selectedModel={agent.model}
                     onChange={(model) => {
-                        console.log("Selected model:", model);
-                        registerUpdate();
-                        setAgent(agent.id, (a) => ({ ...a, model }))
+                      console.log("Selected model:", model)
+                      registerUpdate()
+                      setAgent(agent.id, (a) => ({ ...a, model }))
                     }}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="temperature">
-                    Temperature: {agent.temperature}
-                  </Label>
+                  <Label htmlFor="temperature">Temperature: {agent.temperature}</Label>
                   <input
                     id="temperature"
                     type="range"
@@ -500,12 +553,7 @@ export default function AgentConfigurationPage({
                     max="2"
                     step="0.1"
                     value={agent.temperature}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "temperature",
-                        parseFloat(e.target.value)
-                      )
-                    }
+                    onChange={(e) => handleInputChange("temperature", parseFloat(e.target.value))}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
@@ -519,9 +567,7 @@ export default function AgentConfigurationPage({
                     id="max-tokens"
                     type="number"
                     value={agent.maxTokens}
-                    onChange={(e) =>
-                      handleInputChange("maxTokens", parseInt(e.target.value))
-                    }
+                    onChange={(e) => handleInputChange("maxTokens", parseInt(e.target.value))}
                     placeholder="Maximum response length"
                     min="1"
                     max="4000"
@@ -531,9 +577,7 @@ export default function AgentConfigurationPage({
                   <Label htmlFor="response-format">Response Format</Label>
                   <Select
                     value={agent.responseFormat}
-                    onValueChange={(value) =>
-                      handleInputChange("responseFormat", value)
-                    }
+                    onValueChange={(value) => handleInputChange("responseFormat", value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select response format" />
@@ -550,5 +594,5 @@ export default function AgentConfigurationPage({
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }

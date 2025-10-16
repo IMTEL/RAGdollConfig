@@ -1,10 +1,10 @@
 import { createContext, ReactNode, useContext, useReducer, useEffect, useState } from "react";
-import { AgentUIState, agentsClient, CorpusDocument, Role } from "./agent_data";
+import { AgentUIState, agentsClient, DocumentMetadata, Role } from "./agent_data";
 
 type AgentAction =
   | { type: 'SET_AGENTS'; payload: (prev: AgentUIState[]) => AgentUIState[] }
   | { type: 'SET_AGENT'; payload: { agentId: string; update: (prev: AgentUIState) => AgentUIState } }
-  | { type: 'SET_DOCUMENTS'; payload: { agentId: string; update: (prev: CorpusDocument[]) => CorpusDocument[] } }
+  | { type: 'SET_DOCUMENTS'; payload: { agentId: string; update: (prev: DocumentMetadata[]) => DocumentMetadata[] } }
   | { type: 'SET_ROLES'; payload: { agentId: string; update: (prev: Role[]) => Role[] } }
   | { type: 'SET_ROLE'; payload: { agentId: string; roleId: string; update: ( prev: Role) => Role } };
 
@@ -18,7 +18,7 @@ function agentReducer(state: AgentUIState[], action: AgentAction): AgentUIState[
     case 'SET_DOCUMENTS':
         return state.map(agent => {
             if (agent.id === action.payload.agentId) {
-                return { ...agent, documents: action.payload.update(agent.documents) } as AgentUIState;
+                return { ...agent, documents: action.payload.update(agent.documents || []) } as AgentUIState;
             }
             return agent;
         });
@@ -94,7 +94,7 @@ export function useAgentActions() {
     setAgent: (agentId: string, update: (prev: AgentUIState) => AgentUIState) => {
       dispatch({ type: 'SET_AGENT', payload: { agentId, update } });
     },
-    setDocuments: (agentId: string, update: (prev: CorpusDocument[]) => CorpusDocument[]) => {
+    setDocuments: (agentId: string, update: (prev: DocumentMetadata[]) => DocumentMetadata[]) => {
       dispatch({ type: 'SET_DOCUMENTS', payload: { agentId, update } });
     },
     setRoles: (agentId: string, update: (prev: Role[]) => Role[]) => {

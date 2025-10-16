@@ -1,5 +1,5 @@
-export interface CorpusDocument {
-    id: number
+export interface DocumentMetadata {
+    id: string | null
     name: string
     type: string
     size: string
@@ -21,7 +21,7 @@ export interface AgentUIState {
     enableMemory: boolean
     enableWebSearch: boolean
     responseFormat: "text" | "structured"
-    documents: CorpusDocument[]
+    documents: DocumentMetadata[] | null // null means not loaded yet
     roles: Role[]
     lastUpdated: string
     uploaded: boolean // whether the agent has been uploaded to the backend
@@ -41,7 +41,7 @@ export function defaultAgent(): AgentUIState {
         enableMemory: false,
         enableWebSearch: false,
         responseFormat: "text",
-        documents: [],
+        documents: null,
         roles: [],
         lastUpdated: "unknown",
         uploaded: false,
@@ -62,79 +62,6 @@ export interface LLM {
     description: string
 }
 
-const dummyDocuments: CorpusDocument[] = [
-  {
-    id: 0,
-    name: "Scene 1 Document.pdf",
-    type: "PDF",
-    size: "2.3 MB",
-    uploadDate: "2024-01-15",
-    status: "ready",
-  },
-  {
-    id: 1,
-    name: "Scene 2 Document.pdf",
-    type: "PDF",
-    size: "2.3 MB",
-    uploadDate: "2024-01-15",
-    status: "ready",
-  },
-  {
-    id: 2,
-    name: "Fish Facts.docx",
-    type: "DOCX",
-    size: "1.8 MB",
-    uploadDate: "2024-01-14",
-    status: "ready",
-  },
-  {
-    id: 3,
-    name: "Policies.txt",
-    type: "TXT",
-    size: "0.5 MB",
-    uploadDate: "2024-01-13",
-    status: "ready",
-  },
-];
-
-const initialState: AgentUIState[] = [
-  {
-    ...defaultAgent(),
-    id: "1",
-    name: "Blue Sector NPC",
-    description: "General Blue Sector NPC for in-game interactions",
-    status: "active",
-    systemPrompt: "you are an employee at Blue Sector",
-    lastUpdated: "2025-09-10",
-    documents: dummyDocuments,
-    roles: [
-      {
-        id: "role-1",
-        name: "Fish Cutter",
-        prompt: "you are a very experienced fish cutter",
-        documentAccess: [1, 3, 4],
-      },
-      {
-        id: "role-2",
-        name: "Supervisor",
-        prompt: "you are the supervisor of the fish cutting team",
-        documentAccess: [2, 3, 4],
-      },
-    ],
-  },
-  {
-    ...defaultAgent(),
-    id: "2",
-    name: "Tutoring agent",
-    systemPrompt: "you are a tutor assisting students",
-    description: "An agent to help students with their questions",
-    status: "inactive",
-    lastUpdated: "2024-12-01",
-    documents: [],
-    roles: [],
-  },
-]
-
 const backend_api_url = process.env.BACKEND_API_URL || "http://localhost:8000"
 
 interface DatabaseAgent {
@@ -142,7 +69,6 @@ interface DatabaseAgent {
     name: string
     description: string
     prompt: string
-    corpa: string[]
     llm_provider: string
     llm_model: string // TODO: Change to LLM model
     llm_temperature: number
@@ -203,7 +129,7 @@ export const agentsClient = {
               enableMemory: agent.enableMemory,
               enableWebSearch: agent.enableWebSearch,
               responseFormat: agent.response_format,
-              documents: dummyDocuments, // TODO
+              documents: null,
               roles: agent.roles.map((role, index) => ({
                 id: `role-${index + 1}`,
                 name: role.name,
@@ -224,7 +150,6 @@ export const agentsClient = {
                     name: agent.name,
                     description: agent.description,
                     prompt: agent.systemPrompt,
-                    corpa: [], // TODO
                     roles: agent.roles.map((role) => ({
                         name: role.name,
                         description: role.prompt,
@@ -279,5 +204,49 @@ export const agentsClient = {
             throw new Error(`Failed to fetch agent: ${response.status}`)
         }
         return await response.json()
+    },
+
+    // Get all documents for an agent
+    async getDocumentsForAgent(agentId: string): Promise<DocumentMetadata[]> {
+        const response = await fetch(`${backend_api_url}/documents/agent/${agentId}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+        if (!response.ok) {
+            // If agent not found or no documents, return empty array
+            if (response.status === 404) {
+                return []
+            }
+            throw new Error(`Failed to fetch documents: ${response.status}`)
+        }
+        const data = await response.json()
+        
+        // Convert backend format to DocumentMetadata format
+        return data.documents.map((doc: any) => ({
+            id: doc.id,
+            name: doc.name,
+            type: doc.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
+            size: "Unknown", // Backend doesn't provide size for existing docs
+            uploadDate: doc.created_at ? new Date(doc.created_at).toISOString().split("T")[0] : "Unknown",
+            status: "ready" as const,
+        }))
+    },
+
+    // Delete a document
+    async deleteDocument(documentId: string): Promise<void> {
+        const response = await fetch(`${backend_api_url}/documents/${documentId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error("Document not found")
+            }
+            throw new Error(`Failed to delete document: ${response.status}`)
+        }
     },
 }
