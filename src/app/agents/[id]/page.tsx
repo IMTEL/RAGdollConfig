@@ -44,8 +44,8 @@ import { AgentUIState, agentsClient, DocumentMetadata, LLM } from "../agent_data
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
 
-const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001/";
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000/";
+const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
+const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
 
 export default function AgentConfigurationPage({
   params,
@@ -122,7 +122,7 @@ export default function AgentConfigurationPage({
 
       try {
         const response = await fetch(
-          `${RAGDOLL_BASE_URL}upload/agent/${agent.databaseId}`,
+          `${RAGDOLL_BASE_URL}/upload/agent/${agent.databaseId}`,
           {
             method: "POST",
             body: formData,
@@ -233,7 +233,7 @@ export default function AgentConfigurationPage({
 
     try {
      // const chatUrl = `/chat?${params.toString()}`;
-     const chatUrl = `${CHAT_WEBSITE_URL}${agent.databaseId}`;
+     const chatUrl = `${CHAT_WEBSITE_URL}/${agent.databaseId}`;
       window.open(chatUrl, '_blank');
     } catch (error) {
       console.error('Error launching chat:', error);
