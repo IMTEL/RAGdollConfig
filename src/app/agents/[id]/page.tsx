@@ -545,6 +545,16 @@ export default function AgentConfigurationPage({
                   />
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="embedding-model">Embedding Model</Label>
+                  <Input
+                    id="embedding-model"
+                    value={agent.embeddingModel || "Not set"}
+                    readOnly
+                    disabled
+                    className="cursor-default"
+                  />
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="temperature">Temperature: {agent.temperature}</Label>
                   <input
                     id="temperature"
