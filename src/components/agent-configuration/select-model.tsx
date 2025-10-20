@@ -23,7 +23,9 @@ import {
 
 import { useEffect, useState } from "react";
 
-import { LLM } from "@/app/agents/agent_data";
+import { LLM } from "@/app/(main)/agents/agent_data";
+import axios from "axios";
+import { da } from "date-fns/locale";
 
 interface SelectAgentProps {
   selectedModel?: LLM | null;
@@ -35,23 +37,24 @@ const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://loc
 export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
   const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
   const [pendingModel, setPendingModel] = useState<LLM | null>(null);
-  const [models, setModels] = useState<LLM[]>([]);
+  const [models, setModels] = useState<LLM[] | null>(null);
 
   useEffect(() => {
-    fetch(RAGDOLL_BASE_URL + "/get_models")
-      .then((response) => response.json())
-      .then((data) => {
-        //console.log(data);
-        if (Array.isArray(data)) {
-            setModels(data as LLM[]);
-        } else {
-            alert("Error retrieving models!");
-        }
-      });
+
+    const getModels = async() => {
+      const response = await axios.get("/api/get-models")
+      if (response.status !== 200) {
+        console.error("Failed to load models")
+      }
+      const data = await response.data
+      setModels(data as LLM[])
+    }
+    getModels()
+
   }, []);
 
   const onSelectModel = (value: string) => {
-    const model = models.find((model) => getKey(model) === value) ?? null;
+    const model = models?.find((model) => getKey(model) === value) ?? null;
 
     if (!model?.GDPR_compliant) {
       setShowGDPRWarning(true);
@@ -88,11 +91,11 @@ export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
           <SelectContent>
             <SelectGroup>
               <SelectLabel>Select an LLM</SelectLabel>
-              {models.map((model) => (
+              {Array.isArray(models) ? models.map((model) => (
                 <SelectItem key={getKey(model)} value={getKey(model)}>
                   {model.provider + ": " + model.name}
                 </SelectItem>
-              ))}
+              )) : ""}
             </SelectGroup>
           </SelectContent>
         </Select>

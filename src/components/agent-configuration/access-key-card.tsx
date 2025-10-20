@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
 import { Copy, Eye, Key } from "lucide-react";
 import { useState } from "react";
 import { fa } from "zod/v4/locales";
@@ -36,17 +37,10 @@ export function AccessKeyCard({ accessKey, onRevoke, agentId }: AccessKeyCardPro
             return
         }
 
-        const params = new URLSearchParams({
-            access_key_id: accessKey.id ?? "",
-            agent_id: agentId
-        });
-
-        const response = await fetch(RAGDOLL_BASE_URL + `/revoke-accesskey?${params.toString()}`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
+        const response = await axios.get("/api/revoke-access-key",{
+                params: {agentId:agentId,accessKeyId:accessKey.id}
+            }
+        )
 
         if (response.status !== 200) {
             console.log("An error occured when trying to revoke acces key: " + response.status.toString())

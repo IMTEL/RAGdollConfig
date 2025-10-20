@@ -1,7 +1,7 @@
+import { agentsClient, AgentUIState } from "@/app/(main)/agents/agent_data";
+import { cn } from "@/lib/utils";
 import * as React from "react";
 import { Input } from "../ui/input";
-import { cn } from "@/lib/utils";
-import { agentsClient, AgentUIState, defaultAgent } from "@/app/agents/agent_data";
 
 // Simple modal styles, adjust as needed for shadcn theme
 export function AgentModal({
@@ -18,10 +18,10 @@ export function AgentModal({
   const [description, setDescription] = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
-  const tryCreateAgent = async (name : string, description : string): Promise<AgentUIState | null> =>  {
+  const tryCreateAgent = async (name: string, description: string): Promise<AgentUIState | null> => {
     try {
-      return await agentsClient.createNewAgent(name,description)
-    } catch(e) {
+      return await agentsClient.createNewAgent(name, description)
+    } catch (e) {
       alert("Failed to create a new agent: " + e);
       console.error(e)
       return null
@@ -31,9 +31,9 @@ export function AgentModal({
   async function handleSubmit(e: React.FormEvent) {
     if (loading) return
     setLoading(true)
-    
+
     e.preventDefault();
-    const agent = await tryCreateAgent(name,description)
+    const agent = await tryCreateAgent(name, description)
     if (agent) onCreate(agent);
     setIcon("");
     setName("");

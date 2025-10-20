@@ -43,6 +43,7 @@ import { RoleEditor } from "@/components/agent-configuration/role-editor";
 import { AgentUIState, agentsClient, DocumentMetadata, LLM } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
+import axios from "axios";
 
 const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
 const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
@@ -117,22 +118,20 @@ export default function AgentConfigurationPage({
       const file = files[index];
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("access_key", ""); // TODO: Replace with actual access key
+      formData.append("categories", "General Information"); // TODO: Replace with actual categories
 
       try {
-        const response = await fetch(
-          `${RAGDOLL_BASE_URL}/upload/agent/${agent.databaseId}`,
-          {
-            method: "POST",
-            body: formData,
+        const response = await axios.post(
+          `/api/upload-document`,formData, {
+            params: {agentId: agent.id},
           }
         );
 
-        if (!response.ok) {
+        if (response.status !== 200) {
           throw new Error(`Upload failed: ${response.statusText}`);
         }
 
-        const result = await response.json();
+        const result = await response.data;
         console.log(`Successfully uploaded ${file.name}:`, result);
 
         // Update document with actual ID from backend and set status to ready
@@ -180,7 +179,7 @@ export default function AgentConfigurationPage({
       }));
 
       // Call backend to delete
-      await agentsClient.deleteDocument(documentId);
+      await agentsClient.deleteDocument(documentId,agent.id);
       
       registerUpdate();
       console.log(`Successfully deleted document ${documentId}`);

@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { AccessKey } from "./access-key-card";
 import { useRef, useState } from "react";
 import { Label } from "../ui/label";
+import axios from "axios";
 
 const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000"
 
@@ -58,17 +59,11 @@ export function AccessKeyModal({
 
     console.log(params);
 
-    const response = await fetch(
-      RAGDOLL_BASE_URL + `/new-accesskey?${params.toString()}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await axios.get("/api/new-access-key", {
+      params: {accessKeyName:name,expiryDate:expiry_date,agentId:agentId}
+    })
 
-    if (!response.ok) {
+    if (response.status !== 200) {
       // TODO : Feedback to user
       console.error("Failed to create access key:", response.statusText);
       alert("Failed to create access key:: " + response.statusText);
@@ -76,7 +71,7 @@ export function AccessKeyModal({
     }
 
     try {
-      const accessKey = (await response.json()) as AccessKey;
+      const accessKey = (await response.data) as AccessKey;
       return accessKey;
     } catch (e) {
       console.error("Failed to create access key:", response.statusText);
