@@ -44,8 +44,8 @@ import { AgentUIState, agentsClient, DocumentMetadata, LLM } from "../agent_data
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
 
-const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001/";
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000/";
+const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
+const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
 
 export default function AgentConfigurationPage({
   params,
@@ -118,11 +118,10 @@ export default function AgentConfigurationPage({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("access_key", ""); // TODO: Replace with actual access key
-      formData.append("categories", "General Information"); // TODO: Replace with actual categories
 
       try {
         const response = await fetch(
-          `${RAGDOLL_BASE_URL}upload/agent/${agent.databaseId}`,
+          `${RAGDOLL_BASE_URL}/upload/agent/${agent.databaseId}`,
           {
             method: "POST",
             body: formData,
@@ -168,12 +167,16 @@ export default function AgentConfigurationPage({
     if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
       return;
     }
-
+    const prev_roles = agent.roles.map((role) => ({ ...role, documentAccess: [...role.documentAccess] }));
     try {
       // Optimistically remove from UI
       setAgent(agent.id, (prev) => ({
         ...prev,
         documents: prev.documents && prev.documents.filter((doc) => doc.id !== documentId),
+        roles: prev.roles.map((role) => ({
+          ...role,
+          documentAccess: role.documentAccess.filter((docId) => docId !== documentId),
+        })),
       }));
 
       // Call backend to delete
@@ -188,7 +191,7 @@ export default function AgentConfigurationPage({
       // Reload documents to restore UI state
       if (agent.databaseId) {
         const documents = await agentsClient.getDocumentsForAgent(agent.databaseId);
-        setAgent(agent.id, (prev) => ({ ...prev, documents }));
+        setAgent(agent.id, (prev) => ({ ...prev, documents, roles: prev_roles }));
       }
     }
   };
@@ -233,7 +236,7 @@ export default function AgentConfigurationPage({
 
     try {
      // const chatUrl = `/chat?${params.toString()}`;
-     const chatUrl = `${CHAT_WEBSITE_URL}${agent.databaseId}`;
+     const chatUrl = `${CHAT_WEBSITE_URL}/${agent.databaseId}`;
       window.open(chatUrl, '_blank');
     } catch (error) {
       console.error('Error launching chat:', error);
