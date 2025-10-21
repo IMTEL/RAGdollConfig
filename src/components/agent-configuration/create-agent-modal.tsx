@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Input } from "../ui/input";
 import { cn } from "@/lib/utils";
-import { agentsClient, AgentUIState, defaultAgent, LLM } from "@/app/agents/agent_data";
+import { agentsClient, AgentUIState } from "@/app/agents/agent_data";
 import { SelectEmbedding } from "./select-embedding";
 import {
   AlertDialog,
@@ -26,7 +26,7 @@ export function AgentModal({
   const [icon, setIcon] = React.useState("");
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [embeddingModel, setEmbeddingModel] = React.useState<LLM | null>(null);
+  const [embeddingModel, setEmbeddingModel] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [showValidationAlert, setShowValidationAlert] = React.useState(false);
 
@@ -53,7 +53,7 @@ export function AgentModal({
     
     setLoading(true)
     
-    const agent = await tryCreateAgent(name, description, embeddingModel.provider + ":" + embeddingModel.name)
+  const agent = await tryCreateAgent(name, description, embeddingModel)
     if (agent) {
       // Update the agent with the selected embedding model
       onCreate(agent);
@@ -96,6 +96,7 @@ export function AgentModal({
           <SelectEmbedding
             selectedEmbedding={embeddingModel}
             onChange={(embedding) => setEmbeddingModel(embedding)}
+            required
           />
           <div className={cn("flex justify-end gap-2")}>
             <button

@@ -10,32 +10,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-
 import { useQuery } from "@tanstack/react-query";
-import { LLM } from "@/app/agents/agent_data";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useMemo } from "react";
 
 interface SelectEmbeddingProps {
-  selectedEmbedding?: LLM | null;
-  onChange?: (embedding: LLM | null) => void;
+  selectedEmbedding?: string | null;
+  onChange?: (embedding: string | null) => void;
+  required?: boolean;
 }
 
 const RAGDOLL_BASE_URL =
   process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
 
 // Fetch embedding models from the backend
-async function fetchEmbeddingModels(): Promise<LLM[]> {
+async function fetchEmbeddingModels(): Promise<string[]> {
   const response = await fetch(`${RAGDOLL_BASE_URL}/get_embedding_models`);
   
   if (!response.ok) {
@@ -48,15 +37,14 @@ async function fetchEmbeddingModels(): Promise<LLM[]> {
     throw new Error("Invalid response format");
   }
   
-  return data as LLM[];
+  return data as string[];
 }
 
 export function SelectEmbedding({
   selectedEmbedding,
   onChange,
+  required,
 }: SelectEmbeddingProps) {
-  const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
-  const [pendingEmbedding, setPendingEmbedding] = useState<LLM | null>(null);
 
   // Use TanStack Query to fetch embedding models
   const {
@@ -72,30 +60,23 @@ export function SelectEmbedding({
   });
 
   const onSelectEmbedding = (value: string) => {
-    const embedding =
-      embeddingModels.find((model) => getKey(model) === value) ?? null;
-    
-    if (!embedding?.GDPR_compliant) {
-      setShowGDPRWarning(true);
-      setPendingEmbedding(embedding);
-      return;
-    }
-    onChange?.(embedding);
+    const embedding = embeddingModels.find((model) => getKey(model) === value) ?? null;
+    onChange?.(embedding ?? null);
   };
 
-  const warningSelectContinue = () => {
-    setShowGDPRWarning(false);
-    onChange?.(pendingEmbedding);
+  const getKey = (model: string | null | undefined): string => {
+    if (!model) return "";
+    return model;
   };
 
-  const warningSelectCancel = () => {
-    setShowGDPRWarning(false);
-  };
-
-  const getKey = (llm: LLM | null | undefined): string => {
-    if (!llm) return "";
-    return llm.provider + llm.name;
-  };
+  const prettyLabel = useMemo(() => {
+    return (model: string) => {
+      // Expecting format "provider:modelName"
+      const [provider, name] = model.split(":", 2);
+      if (name) return `${provider}: ${name}`;
+      return model;
+    };
+  }, []);
 
   // Handle loading state
   if (isLoading) {
@@ -152,6 +133,7 @@ export function SelectEmbedding({
       <Select
         value={getKey(selectedEmbedding) ?? ""}
         onValueChange={onSelectEmbedding}
+        required={required}
       >
         <SelectTrigger 
           className={cn(
@@ -172,33 +154,12 @@ export function SelectEmbedding({
                 value={getKey(model)}
                 className="cursor-pointer"
               >
-                {model.provider}: {model.name}
+                {prettyLabel(model)}
               </SelectItem>
             ))}
           </SelectGroup>
         </SelectContent>
       </Select>
-
-      <AlertDialog open={showGDPRWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Data Privacy Notice</AlertDialogTitle>
-            <AlertDialogDescription>
-              This selected embedding model may not fully comply with GDPR requirements
-              and should be avoided in scenarios involving sensitive or
-              regulated personal data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={warningSelectCancel} className="cursor-pointer">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={warningSelectContinue} className="cursor-pointer">
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
