@@ -118,7 +118,6 @@ export default function AgentConfigurationPage({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("access_key", ""); // TODO: Replace with actual access key
-      formData.append("categories", "General Information"); // TODO: Replace with actual categories
 
       try {
         const response = await fetch(
