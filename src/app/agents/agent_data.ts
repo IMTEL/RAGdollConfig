@@ -228,7 +228,7 @@ export const agentsClient = {
             id: doc.id,
             name: doc.name,
             type: doc.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
-            size: "Unknown", // Backend doesn't provide size for existing docs
+            size: doc.size || "Unknown", // Use size from backend
             uploadDate: doc.created_at ? new Date(doc.created_at).toISOString().split("T")[0] : "Unknown",
             status: "ready" as const,
         }))

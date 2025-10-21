@@ -167,12 +167,16 @@ export default function AgentConfigurationPage({
     if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
       return;
     }
-
+    const prev_roles = agent.roles.map((role) => ({ ...role, documentAccess: [...role.documentAccess] }));
     try {
       // Optimistically remove from UI
       setAgent(agent.id, (prev) => ({
         ...prev,
         documents: prev.documents && prev.documents.filter((doc) => doc.id !== documentId),
+        roles: prev.roles.map((role) => ({
+          ...role,
+          documentAccess: role.documentAccess.filter((docId) => docId !== documentId),
+        })),
       }));
 
       // Call backend to delete
@@ -187,7 +191,7 @@ export default function AgentConfigurationPage({
       // Reload documents to restore UI state
       if (agent.databaseId) {
         const documents = await agentsClient.getDocumentsForAgent(agent.databaseId);
-        setAgent(agent.id, (prev) => ({ ...prev, documents }));
+        setAgent(agent.id, (prev) => ({ ...prev, documents, roles: prev_roles }));
       }
     }
   };
