@@ -1,22 +1,13 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import AccessKeysPage from "@/components/agent-configuration/access-key-page";
+import { RoleEditor } from "@/components/agent-configuration/role-editor";
 import {
-  ArrowLeft,
-  Bot,
-  Save,
-  Upload,
-  FileText,
-  Trash2,
-  Calendar,
-  Drama,
-  Key,
-} from "lucide-react";
+  SelectModel,
+} from "@/components/agent-configuration/select-model";
+import { TestAgent } from "@/components/agent-configuration/test-agent-button";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -24,7 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -32,15 +24,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { use } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  SelectModel,
-} from "@/components/agent-configuration/select-model";
-import { RoleEditor } from "@/components/agent-configuration/role-editor";
-import { AgentUIState, agentsClient, DocumentMetadata, LLM } from "../agent_data";
+  ArrowLeft,
+  Bot,
+  Calendar,
+  Drama,
+  FileText,
+  Key,
+  Save,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { use, useCallback, useEffect, useState } from "react";
+import { agentsClient, AgentUIState, DocumentMetadata } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
 import axios from "axios";
@@ -97,10 +98,10 @@ export default function AgentConfigurationPage({
 
   const handleFileUpload = useCallback(async (files: FileList) => {
     registerUpdate();
-    
+
     // Create temporary IDs for UI tracking
     const tempIds = Array.from(files).map((_, index) => `temp-${Date.now()}-${index}`);
-    
+
     const newDocuments: DocumentMetadata[] = Array.from(files).map((file, index) => ({
       id: tempIds[index],
       name: file.name,
@@ -186,7 +187,7 @@ export default function AgentConfigurationPage({
     } catch (error) {
       console.error("Failed to delete document:", error);
       alert("Failed to delete document. Please try again.");
-      
+
       // Reload documents to restore UI state
       if (agent.databaseId) {
         const documents = await agentsClient.getDocumentsForAgent(agent.databaseId);
@@ -220,27 +221,13 @@ export default function AgentConfigurationPage({
   const handleSave = () => {
     // TODO: Implement save functionality
     agentsClient.updateAgent(agent).then((newAgent) => {
-        setAgent(agent.id, (_) => newAgent);
-        if (newAgent.databaseId !== agent.databaseId) {
-            router.replace(`/agents/${newAgent.databaseId}`);
-        }
+      setAgent(agent.id, (_) => newAgent);
+      if (newAgent.databaseId !== agent.databaseId) {
+        router.replace(`/agents/${newAgent.databaseId}`);
+      }
     });
     // Temporary alert for demonstration
     alert("Agent configuration saved!");
-  };
-
-  const handleTestAgent = () => {
-    // Log the attempt
-    console.log('Testing agent:', agent.name, 'with ID:', agent.databaseId);
-
-    try {
-     // const chatUrl = `/chat?${params.toString()}`;
-     const chatUrl = `${CHAT_WEBSITE_URL}/${agent.databaseId}`;
-      window.open(chatUrl, '_blank');
-    } catch (error) {
-      console.error('Error launching chat:', error);
-      alert('Failed to launch chat interface. Please try again.');
-    }
   };
 
   return (
@@ -259,10 +246,7 @@ export default function AgentConfigurationPage({
           </div>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button variant="outline" disabled={!agent.uploaded} onClick={handleTestAgent}>
-            <Bot className="mr-2 h-4 w-4" />
-            Test Agent
-          </Button>
+          <TestAgent agent={agent} />
           <Button
             onClick={handleSave}
             className={
@@ -404,11 +388,10 @@ export default function AgentConfigurationPage({
               <CardContent className="space-y-4">
                 {/* Upload Area */}
                 <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    dragActive
-                      ? "border-primary bg-primary/5"
-                      : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                  }`}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                    }`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
@@ -488,8 +471,8 @@ export default function AgentConfigurationPage({
                                 document.status === "ready"
                                   ? "default"
                                   : document.status === "processing"
-                                  ? "secondary"
-                                  : "destructive"
+                                    ? "secondary"
+                                    : "destructive"
                               }
                               className="text-xs"
                             >
