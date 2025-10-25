@@ -1,5 +1,4 @@
 "use client";
-
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
 import { RoleEditor } from "@/components/agent-configuration/role-editor";
 import {
@@ -28,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import axios from "axios";
 import {
   ArrowLeft,
   Bot,
@@ -43,8 +43,6 @@ import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useState } from "react";
 import { agentsClient, AgentUIState, DocumentMetadata } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
-import AccessKeysPage from "@/components/agent-configuration/access-key-page";
-import axios from "axios";
 
 const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
 const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
@@ -123,9 +121,9 @@ export default function AgentConfigurationPage({
 
       try {
         const response = await axios.post(
-          `/api/upload-document`,formData, {
-            params: {agentId: agent.id},
-          }
+          `/api/upload-document`, formData, {
+          params: { agentId: agent.id },
+        }
         );
 
         if (response.status !== 200) {
@@ -180,8 +178,8 @@ export default function AgentConfigurationPage({
       }));
 
       // Call backend to delete
-      await agentsClient.deleteDocument(documentId,agent.id);
-      
+      await agentsClient.deleteDocument(documentId, agent.id);
+
       registerUpdate();
       console.log(`Successfully deleted document ${documentId}`);
     } catch (error) {
