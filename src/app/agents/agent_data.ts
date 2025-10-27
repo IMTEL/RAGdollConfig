@@ -155,7 +155,7 @@ export const agentsClient = {
                         description: role.prompt,
                         document_access: role.documentAccess,
                     })),
-                    llm_provider: "idun",
+                    llm_provider: agent.model?.provider || "idun",
                     llm_model: agent.model?.name || "none",
                     llm_temperature: agent.temperature,
                     llm_max_tokens: agent.maxTokens,
