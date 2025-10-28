@@ -35,6 +35,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { use } from "react";
 import {
   SelectModel,
@@ -85,6 +94,17 @@ export default function AgentConfigurationPage({
   }
 
   const [dragActive, setDragActive] = useState(false);
+  const [embeddingError, setEmbeddingError] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    fileName: string;
+  }>({
+    show: false,
+    title: "",
+    message: "",
+    fileName: "",
+  });
 
   const handleInputChange = (
     field: keyof AgentUIState,
@@ -129,7 +149,44 @@ export default function AgentConfigurationPage({
         );
 
         if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
+          const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+          
+          // Check if it's an embedding API error (401 or 400)
+          if (response.status === 401) {
+            // API Key authentication error
+            setEmbeddingError({
+              show: true,
+              title: "Embedding API Authentication Failed",
+              message: errorData.detail || "The API key does not have access to the configured embedding model. Please verify your API key permissions.",
+              fileName: file.name,
+            });
+          } else if (response.status === 400 && errorData.detail?.includes("Embedding")) {
+            // Invalid embedding model error
+            setEmbeddingError({
+              show: true,
+              title: "Invalid Embedding Model",
+              message: errorData.detail || "The configured embedding model is invalid or not found. Please check the agent's embedding model configuration.",
+              fileName: file.name,
+            });
+          } else {
+            // Generic error - show alert for any other error
+            setEmbeddingError({
+              show: true,
+              title: "Upload Failed",
+              message: errorData.detail || `Failed to upload document: ${response.statusText}`,
+              fileName: file.name,
+            });
+          }
+          
+          // Update document status to error
+          setDocuments(agent.id, (prev) =>
+            prev.map((doc) =>
+              doc.id === tempIds[index]
+                ? { ...doc, status: "error" as const }
+                : doc
+            )
+          );
+          return; // Stop processing this file
         }
 
         const result = await response.json();
@@ -559,6 +616,16 @@ export default function AgentConfigurationPage({
                   />
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="embedding-model">Embedding Model</Label>
+                  <Input
+                    id="embedding-model"
+                    value={agent.embeddingModel || "Not set"}
+                    readOnly
+                    disabled
+                    className="cursor-default"
+                  />
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="temperature">Temperature: {agent.temperature}</Label>
                   <input
                     id="temperature"
@@ -607,6 +674,40 @@ export default function AgentConfigurationPage({
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Embedding Error Alert Dialog */}
+      <AlertDialog open={embeddingError.show} onOpenChange={(open) => setEmbeddingError(prev => ({ ...prev, show: open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-destructive" />
+              {embeddingError.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <div>
+                  <strong>File:</strong> {embeddingError.fileName}
+                </div>
+                <div className="text-sm">
+                  {embeddingError.message}
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  <strong>What to check:</strong>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>Verify API keys</li>
+                    <li>Ensure the API key has access to the embedding model: <code className="bg-muted px-1 py-0.5 rounded">{agent.embeddingModel}</code></li>
+                  </ul>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setEmbeddingError(prev => ({ ...prev, show: false }))}>
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
