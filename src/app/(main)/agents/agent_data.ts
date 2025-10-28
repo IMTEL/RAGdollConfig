@@ -21,6 +21,7 @@ export interface AgentUIState {
     temperature: number
     maxTokens: number
     model: LLM | null
+    embeddingModel: string
     status: "active" | "inactive"
     enableMemory: boolean
     enableWebSearch: boolean
@@ -41,6 +42,7 @@ export function defaultAgent(): AgentUIState {
         temperature: 0.5,
         maxTokens: 1000,
         model: null,
+        embeddingModel: "",
         status: "active",
         enableMemory: false,
         enableWebSearch: false,
@@ -123,6 +125,7 @@ export const agentsClient = {
               status: agent.status || "inactive",
               enableMemory: agent.enableMemory,
               enableWebSearch: agent.enableWebSearch,
+              embeddingModel: agent.embedding_model,
               responseFormat: agent.response_format,
               documents: null,
               roles: agent.roles.map((role, index) => ({
@@ -150,14 +153,14 @@ export const agentsClient = {
                         description: role.prompt,
                         document_access: role.documentAccess,
                     })),
-                    llm_provider: "idun",
+                    llm_provider: agent.model?.provider || "idun",
                     llm_model: agent.model?.name || "none",
                     llm_temperature: agent.temperature,
                     llm_max_tokens: agent.maxTokens,
                     llm_api_key: "sk-1234567890abcdef",
                     access_key: [],
                     retrieval_method: "semantic",
-                    embedding_model: "text-embedding-ada-002",
+                    embedding_model: agent.embeddingModel,
                     status: agent.status,
                     response_format: agent.responseFormat,
                     last_updated: agent.lastUpdated,
@@ -167,10 +170,11 @@ export const agentsClient = {
         )
     },
 
-    async createNewAgent(name : string, description : string): Promise<AgentUIState> {
+    async createNewAgent(name : string, description : string, embedding: string): Promise<AgentUIState> {
       const agent = defaultAgent()
       agent.name = name
       agent.description = description
+      agent.embeddingModel = embedding
       return this.updateAgent(agent)
     },
 
