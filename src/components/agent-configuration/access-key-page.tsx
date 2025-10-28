@@ -23,7 +23,7 @@ export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
       const params = new URLSearchParams({ agent_id: agentId });
 
       const response = await axios.get("/api/fetch-access-keys", {
-        params:{agentId:agentId}
+        params: { agentId: agentId }
       })
 
       if (response.status !== 200) {
