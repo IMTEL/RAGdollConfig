@@ -1,10 +1,5 @@
+
 import { agentsClient, AgentUIState } from "@/app/(main)/agents/agent_data";
-import { cn } from "@/lib/utils";
-import * as React from "react";
-import { Input } from "../ui/input";
-import { cn } from "@/lib/utils";
-import { agentsClient, AgentUIState } from "@/app/agents/agent_data";
-import { SelectEmbedding } from "./select-embedding";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +9,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+import * as React from "react";
+import { Input } from "../ui/input";
+import { SelectEmbedding } from "./select-embedding";
 
 // Simple modal styles, adjust as needed for shadcn theme
 export function AgentModal({
@@ -32,10 +31,10 @@ export function AgentModal({
   const [loading, setLoading] = React.useState(false);
   const [showValidationAlert, setShowValidationAlert] = React.useState(false);
 
-  const tryCreateAgent = async (name : string, description : string, embeddingModel: string): Promise<AgentUIState | null> =>  {
+  const tryCreateAgent = async (name: string, description: string, embeddingModel: string): Promise<AgentUIState | null> => {
     try {
-      return await agentsClient.createNewAgent(name,description,embeddingModel)
-    } catch(e) {
+      return await agentsClient.createNewAgent(name, description, embeddingModel)
+    } catch (e) {
       alert("Failed to create a new agent: " + e);
       console.error(e)
       return null
@@ -44,18 +43,18 @@ export function AgentModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     if (loading) return
-    
+
     // Validate embedding model is selected
     if (!embeddingModel) {
       setShowValidationAlert(true);
       return;
     }
-    
+
     setLoading(true)
-    
-  const agent = await tryCreateAgent(name, description, embeddingModel)
+
+    const agent = await tryCreateAgent(name, description, embeddingModel)
     if (agent) {
       // Update the agent with the selected embedding model
       onCreate(agent);
