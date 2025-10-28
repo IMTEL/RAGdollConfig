@@ -584,6 +584,85 @@ export default function AgentConfigurationPage({
                 )}
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>RAG Retrieval Settings</CardTitle>
+                <CardDescription>
+                  Configure parameters for document retrieval and context generation
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="topK">Maximum Number of Documents to Reference</Label>
+                    <span className="text-sm font-medium">{agent.topK}</span>
+                  </div>
+                  <input
+                    id="topK"
+                    type="range"
+                    min="1"
+                    max="20"
+                    step="1"
+                    value={agent.topK}
+                    onChange={(e) => handleInputChange("topK", parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="similarityThreshold">Similarity Threshold</Label>
+                    <span className="text-sm font-medium">
+                      {agent.similarityThreshold.toFixed(2)}
+                    </span>
+                  </div>
+                  <input
+                    id="similarityThreshold"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={agent.similarityThreshold}
+                    onChange={(e) =>
+                      handleInputChange("similarityThreshold", parseFloat(e.target.value))
+                    }
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Minimum similarity score for retrieved documents (0.0-1.0)
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="hybridSearchAlpha">Search Type</Label>
+                    <span className="text-sm font-medium">
+                      {agent.hybridSearchAlpha.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <input
+                      id="hybridSearchAlpha"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={agent.hybridSearchAlpha}
+                      onChange={(e) =>
+                        handleInputChange("hybridSearchAlpha", parseFloat(e.target.value))
+                      }
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                    />
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>Keyword</span>
+                      <span>Semantic</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    ({(agent.hybridSearchAlpha * 100).toFixed(0)}% semantic search,{" "}
+                    {((1 - agent.hybridSearchAlpha) * 100).toFixed(0)}% keyword search)
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
         <TabsContent value="roles">
