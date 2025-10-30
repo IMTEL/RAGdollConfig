@@ -30,6 +30,10 @@ export interface AgentUIState {
     roles: Role[]
     lastUpdated: string
     uploaded: boolean // whether the agent has been uploaded to the backend
+    // RAG retrieval parameters
+    topK: number
+    similarityThreshold: number
+    hybridSearchAlpha: number
 }
 
 export function defaultAgent(): AgentUIState {
@@ -51,6 +55,9 @@ export function defaultAgent(): AgentUIState {
         roles: [],
         lastUpdated: "unknown",
         uploaded: false,
+        topK: 5,
+        similarityThreshold: 0.5,
+        hybridSearchAlpha: 0.75,
     }
 }
 
@@ -89,6 +96,10 @@ interface DatabaseAgent {
     enableWebSearch: boolean // not in backend and also we wont do this low key
     last_updated?: string
     roles: DatabaseRole[]
+    // RAG retrieval parameters
+    top_k?: number
+    similarity_threshold?: number
+    hybrid_search_alpha?: number
 }
 
 interface DatabaseRole {
@@ -136,6 +147,9 @@ export const agentsClient = {
               })),
               lastUpdated: agent.last_updated || "unknown",
               uploaded: true,
+              topK: agent.top_k ?? 5,
+              similarityThreshold: agent.similarity_threshold ?? 0.5,
+              hybridSearchAlpha: agent.hybrid_search_alpha ?? 0.75,
             } as AgentUIState)
         )
     },
@@ -166,6 +180,9 @@ export const agentsClient = {
                     last_updated: agent.lastUpdated,
                     enableMemory: agent.enableMemory,
                     enableWebSearch: agent.enableWebSearch,
+                    top_k: agent.topK,
+                    similarity_threshold: agent.similarityThreshold,
+                    hybrid_search_alpha: agent.hybridSearchAlpha,
                 } as DatabaseAgent)
         )
     },
