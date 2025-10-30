@@ -1,18 +1,23 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   Bot,
-  Database,
-  Key,
-  User,
-  Zap,
-  Settings,
-  LogOut,
   ChevronDown,
+  LogOut,
+  User,
+  Zap
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -23,14 +28,6 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const navigationItems = [
   {
@@ -40,8 +37,12 @@ const navigationItems = [
   },
 ];
 
+import { handleSignOut } from '@/lib/auth';
+import { useSession } from "next-auth/react";
+
 export function AppSidebar() {
   const pathname = usePathname();
+  const session = useSession()
 
   return (
     <Sidebar>
@@ -76,7 +77,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t p-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-lg p-2 transition-colors">
+            <button className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-lg p-2 transition-colors">
               <Avatar className="h-8 w-8">
                 <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
                 <AvatarFallback>
@@ -84,21 +85,18 @@ export function AppSidebar() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col flex-1">
-                <span className="text-sm font-medium">John Doe</span>
-                <span className="text-xs text-muted-foreground">
-                  john@example.com
-                </span>
+                <span className="text-sm font-medium">{session.data?.user?.name ?? ""}</span>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </div>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem>
+            {/**<DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
-            </DropdownMenuItem>
+            </DropdownMenuItem>*/}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>

@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
 import { Copy, Eye, Key } from "lucide-react";
 import { useState } from "react";
-import { fa } from "zod/v4/locales";
 const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000"
 
 export interface AccessKey {
@@ -36,17 +36,10 @@ export function AccessKeyCard({ accessKey, onRevoke, agentId }: AccessKeyCardPro
             return
         }
 
-        const params = new URLSearchParams({
-            access_key_id: accessKey.id ?? "",
-            agent_id: agentId
-        });
-
-        const response = await fetch(RAGDOLL_BASE_URL + `/revoke-accesskey?${params.toString()}`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
+        const response = await axios.get("/api/revoke-access-key",{
+                params: {agentId:agentId,accessKeyId:accessKey.id}
+            }
+        )
 
         if (response.status !== 200) {
             console.log("An error occured when trying to revoke acces key: " + response.status.toString())
@@ -61,7 +54,7 @@ export function AccessKeyCard({ accessKey, onRevoke, agentId }: AccessKeyCardPro
             return
         }
         navigator.clipboard.writeText(accessKey.key)
-         alert("Accesskey copied");
+        alert("Accesskey copied");
     }
 
 
@@ -79,13 +72,18 @@ export function AccessKeyCard({ accessKey, onRevoke, agentId }: AccessKeyCardPro
                         </Badge>
                     </div>
                     <div className="flex items-center gap-2 font-mono text-sm">
-                        <span className="text-muted-foreground">{displayAccessKey ? accessKey.key : "*************"}</span>
-                        <Button onClick={copyKey} variant="ghost" size="sm" className="h-6 w-6 p-0">
-                            <Copy className="h-3 w-3" />
-                        </Button>
-                        <Button onClick={() => setDisplayAccessKey(!displayAccessKey)} variant="ghost" size="sm" className="h-6 w-6 p-0">
-                            <Eye className="h-3 w-3" />
-                        </Button>
+                        {accessKey.key !== null ?
+                            <div>
+                                <span className="text-muted-foreground">{displayAccessKey ? accessKey.key : "*************"}</span>
+                                <Button onClick={copyKey} variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                    <Copy className="h-3 w-3" />
+                                </Button>
+                                <Button onClick={() => setDisplayAccessKey(!displayAccessKey)} variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                    <Eye className="h-3 w-3" />
+                                </Button>
+                            </div>
+                            : "Keys can only be viewed once"
+                        }
                     </div>
                 </div>
                 <div className="flex gap-2">

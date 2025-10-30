@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { use, useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Bot, Save, Upload, FileText, Trash2, Calendar, Drama, Key } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -28,10 +28,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { use } from "react"
+import axios from "axios"
 import { SelectModel } from "@/components/agent-configuration/select-model"
 import { RoleEditor } from "@/components/agent-configuration/role-editor"
-import { AgentUIState, agentsClient, DocumentMetadata, LLM } from "../agent_data"
+import { TestAgent } from "@/components/agent-configuration/test-agent-button"
+import { AgentUIState, agentsClient, DocumentMetadata } from "../agent_data"
 import { useAgentActions, useAgents } from "../agent_provider"
 import AccessKeysPage from "@/components/agent-configuration/access-key-page"
 
@@ -120,16 +121,15 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
         const file = files[index]
         const formData = new FormData()
         formData.append("file", file)
-        formData.append("access_key", "") // TODO: Replace with actual access key
+        formData.append("categories", "General Information") // TODO: Replace with actual categories
 
         try {
-          const response = await fetch(`${RAGDOLL_BASE_URL}/upload/agent/${agent.databaseId}`, {
-            method: "POST",
-            body: formData,
+          const response = await axios.post(`/api/upload-document`, formData, {
+            params: { agentId: agent.id },
           })
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: response.statusText }))
+          if (response.status !== 200) {
+            const errorData = await response.data.catch(() => ({ detail: response.statusText }))
 
             // Check if it's an embedding API error (401 or 400)
             if (response.status === 401) {
@@ -171,7 +171,7 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
             return // Stop processing this file
           }
 
-          const result = await response.json()
+          const result = await response.data
           console.log(`Successfully uploaded ${file.name}:`, result)
 
           // Update document with actual ID from backend and set status to ready
@@ -222,7 +222,7 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
       }))
 
       // Call backend to delete
-      await agentsClient.deleteDocument(documentId)
+      await agentsClient.deleteDocument(documentId, agent.id)
 
       registerUpdate()
       console.log(`Successfully deleted document ${documentId}`)
@@ -313,10 +313,7 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
           </div>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button variant="outline" disabled={!agent.uploaded} onClick={handleTestAgent}>
-            <Bot className="mr-2 h-4 w-4" />
-            Test Agent
-          </Button>
+          <TestAgent agent={agent} />
           <Button
             onClick={handleSave}
             className={

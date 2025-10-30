@@ -2,6 +2,7 @@
 import { AccessKey, AccessKeyCard } from "@/components/agent-configuration/access-key-card";
 import { AccessKeyModal } from "@/components/agent-configuration/access-key-modal";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL
@@ -21,20 +22,17 @@ export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
     const getAccessKeys = async () => {
       const params = new URLSearchParams({ agent_id: agentId });
 
-      const response = await fetch(BACKEND_API_URL + `/get-accesskeys?${params.toString()}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await axios.get("/api/fetch-access-keys", {
+        params: { agentId: agentId }
+      })
 
-      if (!response.ok) {
+      if (response.status !== 200) {
         console.error("Could not fetch  access-keys : " + response.status.toString())
         return
       }
 
       try {
-        const accessKey = await response.json() as AccessKey[]
+        const accessKey = await response.data as AccessKey[]
         setAccessKeys(accessKey)
       } catch (e) {
         console.error("Failed to fetch access key:", response.statusText);

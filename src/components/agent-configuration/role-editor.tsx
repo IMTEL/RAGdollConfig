@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Plus, Edit, Trash2, X, Drama } from "lucide-react";
-import { Role, DocumentMetadata } from "@/app/agents/agent_data";
-import { useAgentActions, useAgents } from "@/app/agents/agent_provider";
+import { Role, DocumentMetadata } from "@/app/(main)/agents/agent_data";
+import { useAgentActions, useAgents } from "@/app/(main)/agents/agent_provider";
 
 interface RoleEditorProps {
   agent_id: string;
