@@ -1,40 +1,24 @@
-"use client";
+"use client"
 
-import { useState, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Bot,
-  Save,
-  Upload,
-  FileText,
-  Trash2,
-  Calendar,
-  Drama,
-  Key,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+import { useState, useCallback, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, Bot, Save, Upload, FileText, Trash2, Calendar, Drama, Key } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,188 +27,189 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { use } from "react";
-import {
-  SelectModel,
-} from "@/components/agent-configuration/select-model";
-import { RoleEditor } from "@/components/agent-configuration/role-editor";
-import { AgentUIState, agentsClient, DocumentMetadata, LLM } from "../agent_data";
-import { useAgentActions, useAgents } from "../agent_provider";
-import AccessKeysPage from "@/components/agent-configuration/access-key-page";
+} from "@/components/ui/alert-dialog"
+import { use } from "react"
+import { SelectModel } from "@/components/agent-configuration/select-model"
+import { RoleEditor } from "@/components/agent-configuration/role-editor"
+import { AgentUIState, agentsClient, DocumentMetadata, LLM } from "../agent_data"
+import { useAgentActions, useAgents } from "../agent_provider"
+import AccessKeysPage from "@/components/agent-configuration/access-key-page"
 
-const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
+const CHAT_WEBSITE_URL = process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001"
+const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000"
 
-export default function AgentConfigurationPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { state } = useAgents();
-  const { setAgent, setDocuments } = useAgentActions();
-  const router = useRouter();
-  const { id } = use(params);
+export default function AgentConfigurationPage({ params }: { params: Promise<{ id: string }> }) {
+  const { state } = useAgents()
+  const { setAgent, setDocuments } = useAgentActions()
+  const router = useRouter()
+  const { id } = use(params)
 
-  const agent = state.find((agent) => agent.databaseId === id || agent.id === id);
+  const agent = state.find((agent) => agent.databaseId === id || agent.id === id)
 
   if (!agent) {
-    return <div> Agent not found </div>;
+    return <div> Agent not found </div>
   }
 
   // Load documents when the page opens
   useEffect(() => {
     // Only fetch if agent has a database ID and documents haven't been loaded yet
     if (agent.databaseId && agent.documents === null) {
-      agentsClient.getDocumentsForAgent(agent.databaseId)
+      agentsClient
+        .getDocumentsForAgent(agent.databaseId)
         .then((documents) => {
-          setAgent(agent.id, (prev) => ({ ...prev, documents }));
+          setAgent(agent.id, (prev) => ({ ...prev, documents }))
         })
         .catch((error) => {
-          console.error("Failed to load documents:", error);
+          console.error("Failed to load documents:", error)
           // Set to empty array on error so we don't keep retrying
-          setAgent(agent.id, (prev) => ({ ...prev, documents: [] }));
-        });
+          setAgent(agent.id, (prev) => ({ ...prev, documents: [] }))
+        })
     }
-  }, [agent.databaseId, agent.documents, agent.id, setAgent]);
+  }, [agent.databaseId, agent.documents, agent.id, setAgent])
 
   const registerUpdate = () => {
-    const last_updated = new Date().toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" });
-    setAgent(agent.id, (prev) => ({ ...prev, uploaded: false, lastUpdated: last_updated }));
+    const last_updated = new Date().toLocaleString("nb-NO", {
+      dateStyle: "short",
+      timeStyle: "short",
+    })
+    setAgent(agent.id, (prev) => ({ ...prev, uploaded: false, lastUpdated: last_updated }))
   }
 
-  const [dragActive, setDragActive] = useState(false);
+  const [dragActive, setDragActive] = useState(false)
   const [embeddingError, setEmbeddingError] = useState<{
-    show: boolean;
-    title: string;
-    message: string;
-    fileName: string;
+    show: boolean
+    title: string
+    message: string
+    fileName: string
   }>({
     show: false,
     title: "",
     message: "",
     fileName: "",
-  });
+  })
 
   const handleInputChange = (
     field: keyof AgentUIState,
     value: string | number | boolean | null
   ) => {
     registerUpdate()
-    setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
-  };
+    setAgent(agent.id, (prev) => ({ ...prev, [field]: value }))
+  }
 
-  const handleFileUpload = useCallback(async (files: FileList) => {
-    registerUpdate();
-    
-    // Create temporary IDs for UI tracking
-    const tempIds = Array.from(files).map((_, index) => `temp-${Date.now()}-${index}`);
-    
-    const newDocuments: DocumentMetadata[] = Array.from(files).map((file, index) => ({
-      id: tempIds[index],
-      name: file.name,
-      type: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
-      size: `${(file.size / 1024).toFixed(1)} KB`,
-      uploadDate: new Date().toISOString().split("T")[0],
-      status: "processing" as const,
-    }));
+  const handleFileUpload = useCallback(
+    async (files: FileList) => {
+      registerUpdate()
 
-    // Add documents to UI immediately
-    setDocuments(agent.id, (prev) => [...prev, ...newDocuments]);
+      // Create temporary IDs for UI tracking
+      const tempIds = Array.from(files).map((_, index) => `temp-${Date.now()}-${index}`)
 
-    // Upload each file to the backend
-    for (let index = 0; index < files.length; index++) {
-      const file = files[index];
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("access_key", ""); // TODO: Replace with actual access key
+      const newDocuments: DocumentMetadata[] = Array.from(files).map((file, index) => ({
+        id: tempIds[index],
+        name: file.name,
+        type: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
+        size: `${(file.size / 1024).toFixed(1)} KB`,
+        uploadDate: new Date().toISOString().split("T")[0],
+        status: "processing" as const,
+      }))
 
-      try {
-        const response = await fetch(
-          `${RAGDOLL_BASE_URL}/upload/agent/${agent.databaseId}`,
-          {
+      // Add documents to UI immediately
+      setDocuments(agent.id, (prev) => [...prev, ...newDocuments])
+
+      // Upload each file to the backend
+      for (let index = 0; index < files.length; index++) {
+        const file = files[index]
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("access_key", "") // TODO: Replace with actual access key
+
+        try {
+          const response = await fetch(`${RAGDOLL_BASE_URL}/upload/agent/${agent.databaseId}`, {
             method: "POST",
             body: formData,
-          }
-        );
+          })
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-          
-          // Check if it's an embedding API error (401 or 400)
-          if (response.status === 401) {
-            // API Key authentication error
-            setEmbeddingError({
-              show: true,
-              title: "Embedding API Authentication Failed",
-              message: errorData.detail || "The API key does not have access to the configured embedding model. Please verify your API key permissions.",
-              fileName: file.name,
-            });
-          } else if (response.status === 400 && errorData.detail?.includes("Embedding")) {
-            // Invalid embedding model error
-            setEmbeddingError({
-              show: true,
-              title: "Invalid Embedding Model",
-              message: errorData.detail || "The configured embedding model is invalid or not found. Please check the agent's embedding model configuration.",
-              fileName: file.name,
-            });
-          } else {
-            // Generic error - show alert for any other error
-            setEmbeddingError({
-              show: true,
-              title: "Upload Failed",
-              message: errorData.detail || `Failed to upload document: ${response.statusText}`,
-              fileName: file.name,
-            });
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: response.statusText }))
+
+            // Check if it's an embedding API error (401 or 400)
+            if (response.status === 401) {
+              // API Key authentication error
+              setEmbeddingError({
+                show: true,
+                title: "Embedding API Authentication Failed",
+                message:
+                  errorData.detail ||
+                  "The API key does not have access to the configured embedding model. Please verify your API key permissions.",
+                fileName: file.name,
+              })
+            } else if (response.status === 400 && errorData.detail?.includes("Embedding")) {
+              // Invalid embedding model error
+              setEmbeddingError({
+                show: true,
+                title: "Invalid Embedding Model",
+                message:
+                  errorData.detail ||
+                  "The configured embedding model is invalid or not found. Please check the agent's embedding model configuration.",
+                fileName: file.name,
+              })
+            } else {
+              // Generic error - show alert for any other error
+              setEmbeddingError({
+                show: true,
+                title: "Upload Failed",
+                message: errorData.detail || `Failed to upload document: ${response.statusText}`,
+                fileName: file.name,
+              })
+            }
+
+            // Update document status to error
+            setDocuments(agent.id, (prev) =>
+              prev.map((doc) =>
+                doc.id === tempIds[index] ? { ...doc, status: "error" as const } : doc
+              )
+            )
+            return // Stop processing this file
           }
-          
-          // Update document status to error
+
+          const result = await response.json()
+          console.log(`Successfully uploaded ${file.name}:`, result)
+
+          // Update document with actual ID from backend and set status to ready
           setDocuments(agent.id, (prev) =>
             prev.map((doc) =>
               doc.id === tempIds[index]
-                ? { ...doc, status: "error" as const }
+                ? { ...doc, id: result.document_id, status: "ready" as const }
                 : doc
             )
-          );
-          return; // Stop processing this file
+          )
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error)
+          // Update document status to error
+          setDocuments(agent.id, (prev) =>
+            prev.map((doc) =>
+              doc.id === tempIds[index] ? { ...doc, status: "error" as const } : doc
+            )
+          )
         }
-
-        const result = await response.json();
-        console.log(`Successfully uploaded ${file.name}:`, result);
-
-        // Update document with actual ID from backend and set status to ready
-        setDocuments(agent.id, (prev) =>
-          prev.map((doc) =>
-            doc.id === tempIds[index]
-              ? { ...doc, id: result.document_id, status: "ready" as const }
-              : doc
-          )
-        );
-      } catch (error) {
-        console.error(`Failed to upload ${file.name}:`, error);
-        // Update document status to error
-        setDocuments(agent.id, (prev) =>
-          prev.map((doc) =>
-            doc.id === tempIds[index]
-              ? { ...doc, status: "error" as const }
-              : doc
-          )
-        );
       }
-    }
-  }, [agent.id, agent.databaseId]);
+    },
+    [agent.id, agent.databaseId]
+  )
 
   const handleDocumentDelete = async (documentId: string) => {
     if (!documentId) {
-      console.error("Cannot delete document: no ID provided");
-      return;
+      console.error("Cannot delete document: no ID provided")
+      return
     }
 
     // Confirm deletion
     if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
-      return;
+      return
     }
-    const prev_roles = agent.roles.map((role) => ({ ...role, documentAccess: [...role.documentAccess] }));
+    const prev_roles = agent.roles.map((role) => ({
+      ...role,
+      documentAccess: [...role.documentAccess],
+    }))
     try {
       // Optimistically remove from UI
       setAgent(agent.id, (prev) => ({
@@ -234,83 +219,83 @@ export default function AgentConfigurationPage({
           ...role,
           documentAccess: role.documentAccess.filter((docId) => docId !== documentId),
         })),
-      }));
+      }))
 
       // Call backend to delete
-      await agentsClient.deleteDocument(documentId);
-      
-      registerUpdate();
-      console.log(`Successfully deleted document ${documentId}`);
+      await agentsClient.deleteDocument(documentId)
+
+      registerUpdate()
+      console.log(`Successfully deleted document ${documentId}`)
     } catch (error) {
-      console.error("Failed to delete document:", error);
-      alert("Failed to delete document. Please try again.");
-      
+      console.error("Failed to delete document:", error)
+      alert("Failed to delete document. Please try again.")
+
       // Reload documents to restore UI state
       if (agent.databaseId) {
-        const documents = await agentsClient.getDocumentsForAgent(agent.databaseId);
-        setAgent(agent.id, (prev) => ({ ...prev, documents, roles: prev_roles }));
+        const documents = await agentsClient.getDocumentsForAgent(agent.databaseId)
+        setAgent(agent.id, (prev) => ({ ...prev, documents, roles: prev_roles }))
       }
     }
-  };
+  }
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(true);
-  }, []);
+    e.preventDefault()
+    setDragActive(true)
+  }, [])
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
-  }, []);
+    e.preventDefault()
+    setDragActive(false)
+  }, [])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragActive(false);
-      const files = e.dataTransfer.files;
+      e.preventDefault()
+      setDragActive(false)
+      const files = e.dataTransfer.files
       if (files?.length) {
-        handleFileUpload(files);
+        handleFileUpload(files)
       }
     },
     [handleFileUpload]
-  );
+  )
 
   const handleSave = () => {
     // TODO: Implement save functionality
     agentsClient.updateAgent(agent).then((newAgent) => {
-        setAgent(agent.id, (_) => newAgent);
-        if (newAgent.databaseId !== agent.databaseId) {
-            router.replace(`/agents/${newAgent.databaseId}`);
-        }
-    });
+      setAgent(agent.id, (_) => newAgent)
+      if (newAgent.databaseId !== agent.databaseId) {
+        router.replace(`/agents/${newAgent.databaseId}`)
+      }
+    })
     // Temporary alert for demonstration
-    alert("Agent configuration saved!");
-  };
+    alert("Agent configuration saved!")
+  }
 
   const handleTestAgent = () => {
     // Log the attempt
-    console.log('Testing agent:', agent.name, 'with ID:', agent.databaseId);
+    console.log("Testing agent:", agent.name, "with ID:", agent.databaseId)
 
     try {
-     // const chatUrl = `/chat?${params.toString()}`;
-     const chatUrl = `${CHAT_WEBSITE_URL}/${agent.databaseId}`;
-      window.open(chatUrl, '_blank');
+      // const chatUrl = `/chat?${params.toString()}`;
+      const chatUrl = `${CHAT_WEBSITE_URL}/${agent.databaseId}`
+      window.open(chatUrl, "_blank")
     } catch (error) {
-      console.error('Error launching chat:', error);
-      alert('Failed to launch chat interface. Please try again.');
+      console.error("Error launching chat:", error)
+      alert("Failed to launch chat interface. Please try again.")
     }
-  };
+  }
 
   // Determine temperature max based on model provider
-  const tempMax = agent.model?.provider?.toLowerCase() === "idun" ? 2 : 1;
+  const tempMax = agent.model?.provider?.toLowerCase() === "idun" ? 2 : 1
 
   // Clamp temperature if it exceeds the allowed max for the selected model
   useEffect(() => {
     if (typeof agent.temperature === "number" && agent.temperature > tempMax) {
-      registerUpdate();
-      setAgent(agent.id, (prev) => ({ ...prev, temperature: tempMax }));
+      registerUpdate()
+      setAgent(agent.id, (prev) => ({ ...prev, temperature: tempMax }))
     }
-  }, [tempMax, agent.temperature, agent.id]);
+  }, [tempMax, agent.temperature, agent.id])
 
   return (
     <div className="space-y-6">
@@ -594,7 +579,7 @@ export default function AgentConfigurationPage({
               <CardContent className="space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="topK">Maximum Number of Documents to Reference</Label>
+                    <Label htmlFor="topK">Maximum Number of References</Label>
                     <span className="text-sm font-medium">{agent.topK}</span>
                   </div>
                   <input
@@ -755,7 +740,10 @@ export default function AgentConfigurationPage({
       </Tabs>
 
       {/* Embedding Error Alert Dialog */}
-      <AlertDialog open={embeddingError.show} onOpenChange={(open) => setEmbeddingError(prev => ({ ...prev, show: open }))}>
+      <AlertDialog
+        open={embeddingError.show}
+        onOpenChange={(open) => setEmbeddingError((prev) => ({ ...prev, show: open }))}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -767,21 +755,24 @@ export default function AgentConfigurationPage({
                 <div>
                   <strong>File:</strong> {embeddingError.fileName}
                 </div>
-                <div className="text-sm">
-                  {embeddingError.message}
-                </div>
+                <div className="text-sm">{embeddingError.message}</div>
                 <div className="text-xs text-muted-foreground mt-2">
                   <strong>What to check:</strong>
                   <ul className="list-disc list-inside mt-1 space-y-1">
                     <li>Verify API keys</li>
-                    <li>Ensure the API key has access to the embedding model: <code className="bg-muted px-1 py-0.5 rounded">{agent.embeddingModel}</code></li>
+                    <li>
+                      Ensure the API key has access to the embedding model:{" "}
+                      <code className="bg-muted px-1 py-0.5 rounded">{agent.embeddingModel}</code>
+                    </li>
                   </ul>
                 </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setEmbeddingError(prev => ({ ...prev, show: false }))}>
+            <AlertDialogAction
+              onClick={() => setEmbeddingError((prev) => ({ ...prev, show: false }))}
+            >
               Understood
             </AlertDialogAction>
           </AlertDialogFooter>
