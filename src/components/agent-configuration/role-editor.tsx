@@ -1,127 +1,125 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { Plus, Edit, Trash2, X, Drama } from "lucide-react";
-import { Role, DocumentMetadata } from "@/app/(main)/agents/agent_data";
-import { useAgentActions, useAgents } from "@/app/(main)/agents/agent_provider";
+import * as React from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+import { Plus, Edit, Trash2, X, Drama } from "lucide-react"
+import { Role, DocumentMetadata } from "@/app/(main)/agents/agent_data"
+import { useAgentActions, useAgents } from "@/app/(main)/agents/agent_provider"
 
 interface RoleEditorProps {
-  agent_id: string;
-  documents?: DocumentMetadata[];
-  onChange?: () => void;
+  agent_id: string
+  documents?: DocumentMetadata[]
+  onChange?: () => void
 }
 
 export function RoleEditor({ agent_id, documents = [], onChange }: RoleEditorProps) {
-  const { setRoles } = useAgentActions();
-  const { state } = useAgents();
-  const agent = state.find(a => a.id === agent_id);
-  if (!agent) return <div>Agent not found</div>;
-  
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [editingRole, setEditingRole] = React.useState<Role | null>(null);
+  const { setRoles } = useAgentActions()
+  const { state } = useAgents()
+  const agent = state.find((a) => a.id === agent_id)
+  if (!agent) return <div>Agent not found</div>
+
+  const [isModalOpen, setIsModalOpen] = React.useState(false)
+  const [editingRole, setEditingRole] = React.useState<Role | null>(null)
   const [formData, setFormData] = React.useState({
     name: "",
     prompt: "",
     documentAccess: [] as string[],
-  });
+  })
 
   const handleCreateRole = () => {
-    setEditingRole(null);
+    setEditingRole(null)
     setFormData({
       name: "",
       prompt: "",
       documentAccess: [],
-    });
-    setIsModalOpen(true);
-  };
+    })
+    setIsModalOpen(true)
+  }
 
   const handleEditRole = (role: Role) => {
-    setEditingRole(role);
+    setEditingRole(role)
     setFormData({
       name: role.name,
       prompt: role.prompt,
       documentAccess: role.documentAccess,
-    });
-    setIsModalOpen(true);
-  };
+    })
+    setIsModalOpen(true)
+  }
 
   const handleDeleteRole = (roleId: string) => {
-    setRoles(agent_id, roles => roles.filter(role => role.id !== roleId));
-  };
+    setRoles(agent_id, (roles) => roles.filter((role) => role.id !== roleId))
+  }
 
-const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
 
-    const trimmedName = formData.name.trim();
+    const trimmedName = formData.name.trim()
     if (!trimmedName) {
-        window.alert("Role name is required");
-        return;
+      window.alert("Role name is required")
+      return
     }
 
-    const normalized = trimmedName.toLowerCase();
+    const normalized = trimmedName.toLowerCase()
     const isDuplicate = agent.roles.some(
-        (r) =>
-            r.name.trim().toLowerCase() === normalized &&
-            (!editingRole || r.id !== editingRole.id)
-    );
+      (r) => r.name.trim().toLowerCase() === normalized && (!editingRole || r.id !== editingRole.id)
+    )
 
     if (isDuplicate) {
-        window.alert("Role name must be unique");
-        return;
+      window.alert("Role name must be unique")
+      return
     }
-    
-    if (editingRole) {
-        // Update existing role
-        setRoles(agent_id, roles => roles.map(role => 
-            role.id === editingRole.id 
-                ? { ...role, ...formData, name: trimmedName }
-                : role
-        ));
-    } else {
-        // Create new role
-        const newRole: Role = {
-            id: Date.now().toString(),
-            ...formData,
-            name: trimmedName,
-        };
-        setRoles(agent_id, roles => [...roles, newRole]);
-    }
-    
-    setIsModalOpen(false);
-    setEditingRole(null);
-    setFormData({
-        name: "",
-        prompt: "",
-        documentAccess: [],
-    });
 
-    onChange?.();
-};
+    if (editingRole) {
+      // Update existing role
+      setRoles(agent_id, (roles) =>
+        roles.map((role) =>
+          role.id === editingRole.id ? { ...role, ...formData, name: trimmedName } : role
+        )
+      )
+    } else {
+      // Create new role
+      const newRole: Role = {
+        id: Date.now().toString(),
+        ...formData,
+        name: trimmedName,
+      }
+      setRoles(agent_id, (roles) => [...roles, newRole])
+    }
+
+    setIsModalOpen(false)
+    setEditingRole(null)
+    setFormData({
+      name: "",
+      prompt: "",
+      documentAccess: [],
+    })
+
+    onChange?.()
+  }
 
   const handleDocumentAccessChange = (documentId: string, checked: boolean) => {
     if (checked) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         documentAccess: [...prev.documentAccess, documentId],
-      }));
+      }))
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        documentAccess: prev.documentAccess.filter(id => id !== documentId),
-      }));
+        documentAccess: prev.documentAccess.filter((id) => id !== documentId),
+      }))
     }
-  };
+  }
 
   const getDocumentName = (documentId: string) => {
-    return documents.find(doc => doc.id === documentId)?.name || documentId.toString();
-  };
+    return documents.find((doc) => doc.id === documentId)?.name || documentId.toString()
+  }
 
   return (
     <div className="space-y-4">
@@ -200,41 +198,71 @@ const handleSubmit = (e: React.FormEvent) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Role Prompt</label>
+                <label className="text-sm font-medium mb-2 block">Role Prompt (optional)</label>
                 <Textarea
-                  placeholder="Enter the system prompt for this role"
+                  placeholder="Enter the system prompt for this role (optional)"
                   value={formData.prompt}
                   onChange={(e) => setFormData((prev) => ({ ...prev, prompt: e.target.value }))}
-                  required
                   className="min-h-24"
                 />
               </div>
 
               {documents.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium mb-3 block">Document Access</label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium">Document Access</label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const allDocumentIds = documents
+                          .filter((doc) => doc.id)
+                          .map((doc) => doc.id!)
+                        const allSelected = allDocumentIds.every((id) =>
+                          formData.documentAccess.includes(id)
+                        )
+
+                        if (allSelected) {
+                          // Deselect all
+                          setFormData((prev) => ({ ...prev, documentAccess: [] }))
+                        } else {
+                          // Select all
+                          setFormData((prev) => ({ ...prev, documentAccess: allDocumentIds }))
+                        }
+                      }}
+                    >
+                      {documents
+                        .filter((doc) => doc.id)
+                        .every((doc) => formData.documentAccess.includes(doc.id!))
+                        ? "Deselect All"
+                        : "Select All"}
+                    </Button>
+                  </div>
                   <div className="space-y-3 max-h-40 overflow-y-auto">
-                    {documents.map((document) =>
-                      document.id && (
-                        <div key={document.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={document.id.toString()}
-                            checked={formData.documentAccess.includes(document.id)}
-                            onCheckedChange={(checked) =>
-                              document.id && handleDocumentAccessChange(document.id, checked as boolean)
-                            }
-                          />
-                          <label
-                            htmlFor={document.id.toString()}
-                            className="text-sm cursor-pointer flex-1"
-                          >
-                            <span className="font-medium">{document.name}</span>
-                            <span className="text-muted-foreground ml-2">
-                              ({document.type} • {document.size})
-                            </span>
-                          </label>
-                        </div>
-                      )
+                    {documents.map(
+                      (document) =>
+                        document.id && (
+                          <div key={document.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={document.id.toString()}
+                              checked={formData.documentAccess.includes(document.id)}
+                              onCheckedChange={(checked) =>
+                                document.id &&
+                                handleDocumentAccessChange(document.id, checked as boolean)
+                              }
+                            />
+                            <label
+                              htmlFor={document.id.toString()}
+                              className="text-sm cursor-pointer flex-1"
+                            >
+                              <span className="font-medium">{document.name}</span>
+                              <span className="text-muted-foreground ml-2">
+                                ({document.type} • {document.size})
+                              </span>
+                            </label>
+                          </div>
+                        )
                     )}
                   </div>
                 </div>

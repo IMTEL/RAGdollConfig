@@ -1,10 +1,9 @@
-import { Bot, Database, Key, ArrowRight } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { useSession } from "next-auth/react";
+import { Bot, Database, Key, ArrowRight } from "lucide-react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { useSession } from "next-auth/react"
 
 export default function Home() {
-  
   const features = [
     {
       title: "Agents",
@@ -15,24 +14,21 @@ export default function Home() {
     },
     {
       title: "API Keys",
-      description:
-        "Generate and manage API keys for secure access to your resources",
+      description: "Manage API keys for access to LLM models and other services",
       icon: Key,
       href: "/api-keys",
       color: "text-orange-500",
     },
-  ];
+  ]
 
   return (
     <div className="space-y-12">
       {/* Hero Section */}
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight">
-          Welcome to RAGdoll Config
-        </h1>
+        <h1 className="text-4xl font-bold tracking-tight">Welcome to RAGdoll Config</h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Manage your AI agents, knowledge bases, and API access all in one
-          place. Get started by exploring the features below.
+          Manage your AI agents, knowledge bases, and API access all in one place. Get started by
+          exploring the features below.
         </p>
       </div>
 
@@ -42,9 +38,7 @@ export default function Home() {
           <Link key={feature.title} href={feature.href}>
             <div className="group rounded-lg border p-6 space-y-4 hover:bg-accent/50 transition-all duration-200 hover:border-primary/20">
               <div className="space-y-2">
-                <div
-                  className={`inline-flex p-2 rounded-lg bg-accent ${feature.color}`}
-                >
+                <div className={`inline-flex p-2 rounded-lg bg-accent ${feature.color}`}>
                   <feature.icon className="h-6 w-6" />
                 </div>
                 <h3 className="text-xl font-semibold">{feature.title}</h3>
@@ -59,5 +53,5 @@ export default function Home() {
         ))}
       </div>
     </div>
-  );
+  )
 }

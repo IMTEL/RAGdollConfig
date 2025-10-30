@@ -2,7 +2,19 @@
 
 import { use, useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Bot, Save, Upload, FileText, Trash2, Calendar, Drama, Key } from "lucide-react"
+import Link from "next/link"
+import {
+  ArrowLeft,
+  Bot,
+  Save,
+  Upload,
+  FileText,
+  Trash2,
+  Calendar,
+  Drama,
+  Key,
+  AlertTriangle,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -88,6 +100,7 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
     message: "",
     fileName: "",
   })
+  const [activeTab, setActiveTab] = useState("description")
 
   const handleInputChange = (
     field: keyof AgentUIState,
@@ -126,10 +139,11 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
         try {
           const response = await axios.post(`/api/upload-document`, formData, {
             params: { agentId: agent.id },
+            validateStatus: () => true, // Don't throw on any status code
           })
 
           if (response.status !== 200) {
-            const errorData = await response.data.catch(() => ({ detail: response.statusText }))
+            const errorData = response.data || { detail: response.statusText }
 
             // Check if it's an embedding API error (401 or 400)
             if (response.status === 401) {
@@ -171,7 +185,7 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
             return // Stop processing this file
           }
 
-          const result = await response.data
+          const result = response.data
           console.log(`Successfully uploaded ${file.name}:`, result)
 
           // Update document with actual ID from backend and set status to ready
@@ -184,6 +198,18 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
           )
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error)
+
+          // Show error dialog for network or other errors
+          setEmbeddingError({
+            show: true,
+            title: "Upload Failed",
+            message:
+              error instanceof Error
+                ? error.message
+                : "An unexpected error occurred during upload.",
+            fileName: file.name,
+          })
+
           // Update document status to error
           setDocuments(agent.id, (prev) =>
             prev.map((doc) =>
@@ -286,6 +312,20 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
     }
   }
 
+  // Check if there are documents not accessed by any role
+  const getUnaccessedDocuments = () => {
+    if (!agent.documents || agent.documents.length === 0) return []
+
+    const accessedDocIds = new Set<string>()
+    agent.roles.forEach((role) => {
+      role.documentAccess.forEach((docId) => accessedDocIds.add(docId))
+    })
+
+    return agent.documents.filter((doc) => doc.id && !accessedDocIds.has(doc.id))
+  }
+
+  const unaccessedDocuments = getUnaccessedDocuments()
+
   // Determine temperature max based on model provider
   const tempMax = agent.model?.provider?.toLowerCase() === "idun" ? 2 : 1
 
@@ -329,7 +369,12 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="description" className="space-y-6">
+      <Tabs
+        defaultValue="description"
+        className="space-y-6"
+        value={activeTab}
+        onValueChange={setActiveTab}
+      >
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="description" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
@@ -357,8 +402,8 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
           </TabsTrigger>
         </TabsList>{" "}
         <TabsContent value="description">
-          <div className="space-y-6">
-            <Card>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <Card className="h-fit">
               <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
                 <CardDescription>Configure the basic settings for your agent</CardDescription>
@@ -366,6 +411,9 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Agent Name</Label>
+                  <p className="text-sm text-muted-foreground">
+                    The agent will not use this, it's just for your reference.
+                  </p>
                   <Input
                     id="name"
                     value={agent.name}
@@ -375,6 +423,9 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
+                  <p className="text-sm text-muted-foreground">
+                    The agent will not use this, it's just for your reference.
+                  </p>
                   <Textarea
                     id="description"
                     value={agent.description}
@@ -383,20 +434,38 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                     rows={3}
                   />
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle>General Agent Prompt</CardTitle>
+                <CardDescription>
+                  Overarching instructions for how every role in this agent should behave. The agent
+                  will use what you write here directly.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <div className="grid gap-2">
-                  <Label htmlFor="system-prompt">System Prompt</Label>
                   <Textarea
                     id="system-prompt"
                     value={agent.systemPrompt}
                     onChange={(e) => handleInputChange("systemPrompt", e.target.value)}
-                    placeholder="Define the agent's personality and behavior"
-                    rows={8}
+                    placeholder="Describe the roles common personality and behavior"
+                    rows={6}
+                    className={`min-h-[180px] ${
+                      agent.systemPrompt.trim() === ""
+                        ? "ring-2 ring-blue-400 ring-offset-2 animate-pulse"
+                        : ""
+                    }`}
                   />
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* TODO: Uncomment this UI if/when the functionallity is implemented in the backend */}
+
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Agent Status</CardTitle>
                 <CardDescription>
@@ -440,12 +509,12 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                   />
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </TabsContent>
         <TabsContent value="corpus">
-          <div className="space-y-6">
-            <Card>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <Card className="h-fit">
               <CardHeader>
                 <CardTitle>Knowledge Base Documents</CardTitle>
                 <CardDescription>
@@ -493,6 +562,34 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                     Supported formats: PDF, DOC, DOCX, TXT, MD
                   </p>
                 </div>
+
+                {/* Warning for unaccessed documents */}
+                {unaccessedDocuments.length > 0 && (
+                  <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        {unaccessedDocuments.length} document
+                        {unaccessedDocuments.length !== 1 ? "s are" : " is"} not accessed by any
+                        role
+                      </p>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                        Documents: {unaccessedDocuments.map((doc) => doc.name).join(", ")}
+                      </p>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                        Add a new role that has access to{" "}
+                        {unaccessedDocuments.length !== 1 ? "these documents" : "this document"} or
+                        edit an existing role.{" "}
+                        <button
+                          onClick={() => setActiveTab("roles")}
+                          className="underline font-medium hover:text-yellow-900 dark:hover:text-yellow-100 cursor-pointer"
+                        >
+                          Go to roles page
+                        </button>
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Documents Table */}
                 {agent.documents === null ? (
@@ -566,7 +663,7 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                 )}
               </CardContent>
             </Card>
-            <Card>
+            <Card className="h-fit">
               <CardHeader>
                 <CardTitle>RAG Retrieval Settings</CardTitle>
                 <CardDescription>
@@ -715,7 +812,7 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                     max="4000"
                   />
                 </div>
-                <div className="grid gap-2">
+                {/* <div className="grid gap-2">
                   <Label htmlFor="response-format">Response Format</Label>
                   <Select
                     value={agent.responseFormat}
@@ -729,7 +826,7 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                       <SelectItem value="structured">Structured</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
               </CardContent>
             </Card>
           </div>
