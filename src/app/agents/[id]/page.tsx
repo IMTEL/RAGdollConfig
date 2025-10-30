@@ -12,6 +12,8 @@ import {
   Calendar,
   Drama,
   Key,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +96,7 @@ export default function AgentConfigurationPage({
   }
 
   const [dragActive, setDragActive] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [embeddingError, setEmbeddingError] = useState<{
     show: boolean;
     title: string;
@@ -693,6 +696,32 @@ export default function AgentConfigurationPage({
                       setAgent(agent.id, (a) => ({ ...a, model }))
                     }}
                   />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="llm-api-key">LLM API Key</Label>
+                  <div className="relative">
+                    <Input
+                      id="llm-api-key"
+                      type={showApiKey ? "text" : "password"}
+                      value={agent.llmApiKey}
+                      onChange={(e) => handleInputChange("llmApiKey", e.target.value)}
+                      placeholder="Enter API key for the selected model provider"
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    >
+                      {showApiKey ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="embedding-model">Embedding Model</Label>

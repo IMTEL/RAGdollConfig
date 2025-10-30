@@ -18,6 +18,7 @@ export interface AgentUIState {
     maxTokens: number
     model: LLM | null
     embeddingModel: string
+    llmApiKey: string // API key for the LLM provider
     status: "active" | "inactive"
     enableMemory: boolean
     enableWebSearch: boolean
@@ -43,6 +44,7 @@ export function defaultAgent(): AgentUIState {
         maxTokens: 1000,
         model: null,
         embeddingModel: "",
+        llmApiKey: "",
         status: "active",
         enableMemory: false,
         enableWebSearch: false,
@@ -138,6 +140,7 @@ export const agentsClient = {
                 description: "",
                 GDPR_compliant: true,
               } as LLM,
+              llmApiKey: agent.llm_api_key || "",
               status: agent.status || "inactive",
               enableMemory: agent.enableMemory,
               enableWebSearch: agent.enableWebSearch,
@@ -176,7 +179,7 @@ export const agentsClient = {
                     llm_model: agent.model?.name || "none",
                     llm_temperature: agent.temperature,
                     llm_max_tokens: agent.maxTokens,
-                    llm_api_key: "sk-1234567890abcdef",
+                    llm_api_key: agent.llmApiKey || "",
                     access_key: [],
                     retrieval_method: "semantic",
                     embedding_model: agent.embeddingModel,
