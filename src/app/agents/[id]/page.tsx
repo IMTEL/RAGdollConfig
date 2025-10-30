@@ -76,7 +76,8 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
   }
 
   const [dragActive, setDragActive] = useState(false)
-  const [showApiKey, setShowApiKey] = useState(false)
+  const [showLlmApiKey, setShowLlmApiKey] = useState(false)
+  const [showEmbeddingApiKey, setShowEmbeddingApiKey] = useState(false)
   const [embeddingError, setEmbeddingError] = useState<{
     show: boolean
     title: string
@@ -685,7 +686,7 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                   <div className="relative">
                     <Input
                       id="llm-api-key"
-                      type={showApiKey ? "text" : "password"}
+                      type={showLlmApiKey ? "text" : "password"}
                       value={agent.llmApiKey}
                       onChange={(e) => handleInputChange("llmApiKey", e.target.value)}
                       placeholder="Enter API key for the selected model provider"
@@ -696,9 +697,9 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                       variant="ghost"
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowApiKey(!showApiKey)}
+                      onClick={() => setShowLlmApiKey(!showLlmApiKey)}
                     >
-                      {showApiKey ? (
+                      {showLlmApiKey ? (
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
                       ) : (
                         <Eye className="h-4 w-4 text-muted-foreground" />
@@ -715,6 +716,32 @@ export default function AgentConfigurationPage({ params }: { params: Promise<{ i
                     disabled
                     className="cursor-default"
                   />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="embedding-api-key">Embedding API Key</Label>
+                  <div className="relative">
+                    <Input
+                      id="embedding-api-key"
+                      type={showEmbeddingApiKey ? "text" : "password"}
+                      value={agent.embeddingApiKey || ""}
+                      onChange={(e) => handleInputChange("embeddingApiKey", e.target.value)}
+                      placeholder="Enter API key for the embedding model"
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowEmbeddingApiKey(!showEmbeddingApiKey)}
+                    >
+                      {showEmbeddingApiKey ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="temperature">Temperature: {agent.temperature}</Label>

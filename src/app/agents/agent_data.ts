@@ -31,6 +31,7 @@ export interface AgentUIState {
     topK: number
     similarityThreshold: number
     hybridSearchAlpha: number
+    embeddingApiKey?: string // API key for the embedding model
 }
 
 export function defaultAgent(): AgentUIState {
@@ -45,6 +46,7 @@ export function defaultAgent(): AgentUIState {
         model: null,
         embeddingModel: "",
         llmApiKey: "",
+        embeddingApiKey: "",
         status: "active",
         enableMemory: false,
         enableWebSearch: false,
@@ -88,6 +90,7 @@ interface DatabaseAgent {
     access_key: string[] // may change later
     retrieval_method?: string
     embedding_model?: string // optional for now
+    embedding_api_key?: string // API key for the embedding model
     status?: "active" | "inactive"
     response_format: "text" | "structured"
     enableMemory: boolean // not in backend
@@ -122,45 +125,46 @@ export const agentsClient = {
         }))
     },
 
-    convertFromDB(agents: DatabaseAgent[]): AgentUIState[] {
+        convertFromDB(agents: DatabaseAgent[]): AgentUIState[] {
         return agents.map(
-          (agent) =>
-            ({
-              id: agent.id,
-              databaseId: agent.id,
-              name: agent.name,
-              description: agent.description,
-              systemPrompt: agent.prompt,
-              temperature: agent.llm_temperature,
-              maxTokens: agent.llm_max_tokens,
-              model: {
-                id: 0,
-                name: agent.llm_model,
-                provider: agent.llm_provider,
-                description: "",
-                GDPR_compliant: true,
-              } as LLM,
-              llmApiKey: agent.llm_api_key || "",
-              status: agent.status || "inactive",
-              enableMemory: agent.enableMemory,
-              enableWebSearch: agent.enableWebSearch,
-              embeddingModel: agent.embedding_model,
-              responseFormat: agent.response_format,
-              documents: null,
-              roles: agent.roles.map((role, index) => ({
-                id: `role-${index + 1}`,
-                name: role.name,
-                prompt: role.description,
-                documentAccess: role.document_access,
-              })),
-              lastUpdated: agent.last_updated || "unknown",
-              uploaded: true,
-              topK: agent.top_k ?? 5,
-              similarityThreshold: agent.similarity_threshold ?? 0.5,
-              hybridSearchAlpha: agent.hybrid_search_alpha ?? 0.75,
-            } as AgentUIState)
+            (agent) =>
+                ({
+                    id: agent.id,
+                    databaseId: agent.id,
+                    name: agent.name,
+                    description: agent.description,
+                    systemPrompt: agent.prompt,
+                    temperature: agent.llm_temperature,
+                    maxTokens: agent.llm_max_tokens,
+                    model: {
+                        id: 0,
+                        name: agent.llm_model,
+                        provider: agent.llm_provider,
+                        description: "",
+                        GDPR_compliant: true,
+                    } as LLM,
+                    llmApiKey: agent.llm_api_key || "",
+                    embeddingApiKey: agent.embedding_api_key || "",
+                    status: agent.status || "inactive",
+                    enableMemory: agent.enableMemory,
+                    enableWebSearch: agent.enableWebSearch,
+                    embeddingModel: agent.embedding_model,
+                    responseFormat: agent.response_format,
+                    documents: null,
+                    roles: agent.roles.map((role, index) => ({
+                        id: `role-${index + 1}`,
+                        name: role.name,
+                        prompt: role.description,
+                        documentAccess: role.document_access,
+                    })),
+                    lastUpdated: agent.last_updated || "unknown",
+                    uploaded: true,
+                    topK: agent.top_k ?? 5,
+                    similarityThreshold: agent.similarity_threshold ?? 0.5,
+                    hybridSearchAlpha: agent.hybrid_search_alpha ?? 0.75,
+                } as AgentUIState)
         )
-    },
+        },
 
     convertToDB(agents: AgentUIState[]): DatabaseAgent[] {
         return agents.map(
@@ -180,6 +184,7 @@ export const agentsClient = {
                     llm_temperature: agent.temperature,
                     llm_max_tokens: agent.maxTokens,
                     llm_api_key: agent.llmApiKey || "",
+                    embedding_api_key: agent.embeddingApiKey || "",
                     access_key: [],
                     retrieval_method: "semantic",
                     embedding_model: agent.embeddingModel,
