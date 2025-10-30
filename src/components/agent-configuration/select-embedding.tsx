@@ -26,17 +26,17 @@ const RAGDOLL_BASE_URL =
 // Fetch embedding models from the backend
 async function fetchEmbeddingModels(): Promise<string[]> {
   const response = await fetch(`${RAGDOLL_BASE_URL}/get_embedding_models`);
-  
+
   if (!response.ok) {
     throw new Error("Failed to fetch embedding models");
   }
-  
+
   const data = await response.json();
-  
+
   if (!Array.isArray(data)) {
     throw new Error("Invalid response format");
   }
-  
+
   return data as string[];
 }
 
@@ -45,7 +45,6 @@ export function SelectEmbedding({
   onChange,
   required,
 }: SelectEmbeddingProps) {
-
   // Use TanStack Query to fetch embedding models
   const {
     data: embeddingModels = [],
@@ -60,7 +59,8 @@ export function SelectEmbedding({
   });
 
   const onSelectEmbedding = (value: string) => {
-    const embedding = embeddingModels.find((model) => getKey(model) === value) ?? null;
+    const embedding =
+      embeddingModels.find((model) => getKey(model) === value) ?? null;
     onChange?.(embedding ?? null);
   };
 
@@ -82,9 +82,9 @@ export function SelectEmbedding({
   if (isLoading) {
     return (
       <Select disabled>
-        <SelectTrigger 
+        <SelectTrigger
           className={cn(
-            "w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none",
+            "border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none",
             "placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
           )}
         >
@@ -98,9 +98,9 @@ export function SelectEmbedding({
   if (isError) {
     return (
       <Select disabled>
-        <SelectTrigger 
+        <SelectTrigger
           className={cn(
-            "w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none",
+            "border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none",
             "placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
           )}
         >
@@ -116,9 +116,9 @@ export function SelectEmbedding({
   if (embeddingModels.length === 0) {
     return (
       <Select disabled>
-        <SelectTrigger 
+        <SelectTrigger
           className={cn(
-            "w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none",
+            "border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none",
             "placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
           )}
         >
@@ -135,9 +135,9 @@ export function SelectEmbedding({
         onValueChange={onSelectEmbedding}
         required={required}
       >
-        <SelectTrigger 
+        <SelectTrigger
           className={cn(
-            "w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none",
+            "border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none",
             "placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
             "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
             "cursor-pointer"
@@ -149,8 +149,8 @@ export function SelectEmbedding({
           <SelectGroup>
             <SelectLabel>Select an embedding model</SelectLabel>
             {embeddingModels.map((model) => (
-              <SelectItem 
-                key={getKey(model)} 
+              <SelectItem
+                key={getKey(model)}
                 value={getKey(model)}
                 className="cursor-pointer"
               >

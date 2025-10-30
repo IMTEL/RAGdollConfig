@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Bot,
-  ChevronDown,
-  LogOut,
-  User,
-  Zap
-} from "lucide-react";
+import { Bot, ChevronDown, LogOut, User, Zap } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -37,18 +31,18 @@ const navigationItems = [
   },
 ];
 
-import { handleSignOut } from '@/lib/auth';
+import { handleSignOut } from "@/lib/auth";
 import { useSession } from "next-auth/react";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const session = useSession()
+  const session = useSession();
 
   return (
     <Sidebar>
       <SidebarHeader className="border-b px-6 py-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-lg">
             <Zap className="h-4 w-4" />
           </div>
           <span className="text-lg font-semibold">RAGdoll Config</span>
@@ -77,17 +71,19 @@ export function AppSidebar() {
       <SidebarFooter className="border-t p-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-lg p-2 transition-colors">
+            <button className="hover:bg-accent/50 flex cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors">
               <Avatar className="h-8 w-8">
                 <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
                 <AvatarFallback>
                   <User className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col flex-1">
-                <span className="text-sm font-medium">{session.data?.user?.name ?? ""}</span>
+              <div className="flex flex-1 flex-col">
+                <span className="text-sm font-medium">
+                  {session.data?.user?.name ?? ""}
+                </span>
               </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="text-muted-foreground h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

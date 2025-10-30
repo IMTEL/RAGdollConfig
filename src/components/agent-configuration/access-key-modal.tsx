@@ -22,7 +22,8 @@ import { useRef, useState } from "react";
 import { Label } from "../ui/label";
 import axios from "axios";
 
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000"
+const RAGDOLL_BASE_URL =
+  process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
 
 export function AccessKeyModal({
   open,
@@ -39,11 +40,10 @@ export function AccessKeyModal({
   const [dateOpen, setDateOpen] = useState(false);
   const [date, setDate] = useState<Date | null>(null);
 
-
   const getTommorow = () => {
-    const today = new Date()
+    const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-  }
+  };
 
   const tommorrow = useRef<Date>(getTommorow());
 
@@ -60,8 +60,12 @@ export function AccessKeyModal({
     console.log(params);
 
     const response = await axios.get("/api/new-access-key", {
-      params: {accessKeyName:name,expiryDate:expiry_date,agentId:agentId}
-    })
+      params: {
+        accessKeyName: name,
+        expiryDate: expiry_date,
+        agentId: agentId,
+      },
+    });
 
     if (response.status !== 200) {
       // TODO : Feedback to user
@@ -94,13 +98,13 @@ export function AccessKeyModal({
   return (
     <div
       className={cn(
-        "fixed top-0 left-0 right-0 bottom-0 min-h-screen z-50 flex items-center justify-center bg-black/40"
+        "fixed top-0 right-0 bottom-0 left-0 z-50 flex min-h-screen items-center justify-center bg-black/40"
       )}
     >
       <div
-        className={cn("bg-background rounded-lg shadow-lg p-6 w-full max-w-md")}
+        className={cn("bg-background w-full max-w-md rounded-lg p-6 shadow-lg")}
       >
-        <h2 className={cn("text-lg font-semibold mb-4")}>Create Access key</h2>
+        <h2 className={cn("mb-4 text-lg font-semibold")}>Create Access key</h2>
         <form onSubmit={handleSubmit} className={cn("space-y-4")}>
           <Input
             type="text"
@@ -157,7 +161,7 @@ export function AccessKeyModal({
             <button
               type="button"
               className={cn(
-                "px-4 py-2 rounded-md bg-muted text-foreground cursor-pointer"
+                "bg-muted text-foreground cursor-pointer rounded-md px-4 py-2"
               )}
               onClick={onClose}
             >
@@ -166,7 +170,7 @@ export function AccessKeyModal({
             <button
               type="submit"
               className={cn(
-                "px-4 py-2 rounded-md bg-primary text-primary-foreground cursor-pointer"
+                "bg-primary text-primary-foreground cursor-pointer rounded-md px-4 py-2"
               )}
             >
               Create

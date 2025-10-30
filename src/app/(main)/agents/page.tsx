@@ -16,11 +16,11 @@ interface AgentCardProps {
 function AgentCard({ agent }: AgentCardProps) {
   return (
     <Link href={`/agents/${agent.id}`}>
-      <div className="rounded-lg border p-6 space-y-4 hover:bg-accent/50 transition-colors">
+      <div className="hover:bg-accent/50 space-y-4 rounded-lg border p-6 transition-colors">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-muted-foreground" />
+              <Bot className="text-muted-foreground h-5 w-5" />
               <h3 className="text-lg font-semibold">{agent.name}</h3>
               <Badge
                 variant={agent.status === "active" ? "default" : "secondary"}
@@ -36,7 +36,7 @@ function AgentCard({ agent }: AgentCardProps) {
             </Button>
           </div>
         </div>
-        <div className="text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-sm">
           Last updated {agent.lastUpdated}
         </div>
       </div>
@@ -46,9 +46,9 @@ function AgentCard({ agent }: AgentCardProps) {
 
 function AgentCardSkeleton() {
   return (
-    <div className="rounded-lg border p-6 space-y-4">
+    <div className="space-y-4 rounded-lg border p-6">
       <div className="flex items-start justify-between">
-        <div className="space-y-2 flex-1">
+        <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-5" />
             <Skeleton className="h-6 w-32" />
@@ -77,10 +77,7 @@ function AgentsPageContent() {
             Manage and configure your AI agents
           </p>
         </div>
-        <Button 
-          onClick={() => setModalOpen(true)} 
-          className="cursor-pointer"
-        >
+        <Button onClick={() => setModalOpen(true)} className="cursor-pointer">
           <Plus className="mr-2 h-4 w-4" />
           Create New Agent
         </Button>
@@ -89,9 +86,7 @@ function AgentsPageContent() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreate={(agent) => {
-          setAgents((prevAgents) => [
-            ...prevAgents,agent
-          ]);
+          setAgents((prevAgents) => [...prevAgents, agent]);
           setModalOpen(false);
         }}
       />
@@ -103,14 +98,12 @@ function AgentsPageContent() {
           ))
         ) : state.length > 0 ? (
           // Show actual agent cards when data is loaded
-          state.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
-          ))
+          state.map((agent) => <AgentCard key={agent.id} agent={agent} />)
         ) : (
           // Show empty state when no agents exist
-          <div className="text-center py-12">
-            <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No agents yet</h3>
+          <div className="py-12 text-center">
+            <Bot className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+            <h3 className="mb-2 text-lg font-semibold">No agents yet</h3>
             <p className="text-muted-foreground mb-4">
               Create your first AI agent to get started
             </p>

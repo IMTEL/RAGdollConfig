@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Select,
@@ -8,7 +8,7 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 import {
   AlertDialog,
@@ -19,62 +19,63 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 
-import { LLM } from "@/app/(main)/agents/agent_data"
-import axios from "axios"
-import { da } from "date-fns/locale"
+import { LLM } from "@/app/(main)/agents/agent_data";
+import axios from "axios";
+import { da } from "date-fns/locale";
 
 interface SelectAgentProps {
-  selectedModel?: LLM | null
-  onChange?: (model: LLM | null) => void
+  selectedModel?: LLM | null;
+  onChange?: (model: LLM | null) => void;
 }
 
-const RAGDOLL_BASE_URL = process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000"
+const RAGDOLL_BASE_URL =
+  process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
 
 export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
-  const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false)
-  const [pendingModel, setPendingModel] = useState<LLM | null>(null)
-  const [models, setModels] = useState<LLM[] | null>(null)
+  const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
+  const [pendingModel, setPendingModel] = useState<LLM | null>(null);
+  const [models, setModels] = useState<LLM[] | null>(null);
 
   useEffect(() => {
     const getModels = async () => {
-      const response = await axios.get("/api/get-models")
+      const response = await axios.get("/api/get-models");
       if (response.status !== 200) {
-        console.error("Failed to load models")
+        console.error("Failed to load models");
       }
-      const data = await response.data
-      setModels(data as LLM[])
-    }
-    getModels()
-  }, [])
+      const data = await response.data;
+      setModels(data as LLM[]);
+    };
+    getModels();
+  }, []);
 
   const onSelectModel = (value: string) => {
-    const model = models?.find((model) => getKey(model) === value) ?? null
+    const model = models?.find((model) => getKey(model) === value) ?? null;
 
     if (!model?.GDPR_compliant) {
-      setShowGDPRWarning(true)
-      setPendingModel(model)
-      return
+      setShowGDPRWarning(true);
+      setPendingModel(model);
+      return;
     }
-    onChange?.(model)
-  }
+    onChange?.(model);
+  };
 
   const warningSelectContinue = () => {
-    setShowGDPRWarning(false)
-    onChange?.(pendingModel)
-  }
+    setShowGDPRWarning(false);
+    onChange?.(pendingModel);
+  };
 
   const warningSelectCancel = () => {
-    setShowGDPRWarning(false)
-  }
+    setShowGDPRWarning(false);
+  };
 
   const getKey = (llm: LLM | null | undefined): string => {
-    if (!llm) return ""
-    return llm.provider + llm.name
-  }
+    if (!llm) return "";
+    return llm.provider + llm.name;
+  };
 
   return (
     <div>
@@ -111,16 +112,21 @@ export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Data Privacy Notice</AlertDialogTitle>
             <AlertDialogDescription>
-              This selected model may not fully comply with GDPR requirements and should be avoided
-              in scenarios involving sensitive or regulated personal data.
+              This selected model may not fully comply with GDPR requirements
+              and should be avoided in scenarios involving sensitive or
+              regulated personal data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={warningSelectCancel}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={warningSelectContinue}>Continue</AlertDialogAction>
+            <AlertDialogCancel onClick={warningSelectCancel}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={warningSelectContinue}>
+              Continue
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

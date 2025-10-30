@@ -16,11 +16,11 @@ interface AgentCardProps {
 
 function AgentCard({ agent }: AgentCardProps) {
   return (
-    <div className="rounded-lg border p-6 space-y-4 hover:bg-accent/50 transition-colors">
+    <div className="hover:bg-accent/50 space-y-4 rounded-lg border p-6 transition-colors">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-muted-foreground" />
+            <Bot className="text-muted-foreground h-5 w-5" />
             <h3 className="text-lg font-semibold">{agent.name}</h3>
             <Badge
               variant={agent.status === "active" ? "default" : "secondary"}
@@ -36,7 +36,7 @@ function AgentCard({ agent }: AgentCardProps) {
           </Button>
         </div>
       </div>
-      <div className="text-sm text-muted-foreground">
+      <div className="text-muted-foreground text-sm">
         Last updated {agent.lastUpdated}
       </div>
     </div>

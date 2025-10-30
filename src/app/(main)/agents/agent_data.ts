@@ -1,39 +1,39 @@
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import axios from "axios"
-import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import axios from "axios";
+import { getServerSession } from "next-auth/next";
 
 export interface DocumentMetadata {
-  id: string | null
-  name: string
-  type: string
-  size: string
-  content?: string
-  uploadDate: string
-  status: "processing" | "ready" | "error"
+  id: string | null;
+  name: string;
+  type: string;
+  size: string;
+  content?: string;
+  uploadDate: string;
+  status: "processing" | "ready" | "error";
 }
 
 export interface AgentUIState {
-  id: string
-  databaseId: string // ID from backend
-  name: string
-  description: string
-  systemPrompt: string
-  temperature: number
-  maxTokens: number
-  model: LLM | null
-  embeddingModel: string
-  status: "active" | "inactive"
-  enableMemory: boolean
-  enableWebSearch: boolean
-  responseFormat: "text" | "structured"
-  documents: DocumentMetadata[] | null // null means not loaded yet
-  roles: Role[]
-  lastUpdated: string
-  uploaded: boolean // whether the agent has been uploaded to the backend
+  id: string;
+  databaseId: string; // ID from backend
+  name: string;
+  description: string;
+  systemPrompt: string;
+  temperature: number;
+  maxTokens: number;
+  model: LLM | null;
+  embeddingModel: string;
+  status: "active" | "inactive";
+  enableMemory: boolean;
+  enableWebSearch: boolean;
+  responseFormat: "text" | "structured";
+  documents: DocumentMetadata[] | null; // null means not loaded yet
+  roles: Role[];
+  lastUpdated: string;
+  uploaded: boolean; // whether the agent has been uploaded to the backend
   // RAG retrieval parameters
-  topK: number
-  similarityThreshold: number
-  hybridSearchAlpha: number
+  topK: number;
+  similarityThreshold: number;
+  hybridSearchAlpha: number;
 }
 
 export function defaultAgent(): AgentUIState {
@@ -58,61 +58,61 @@ export function defaultAgent(): AgentUIState {
     topK: 5,
     similarityThreshold: 0.5,
     hybridSearchAlpha: 0.75,
-  }
+  };
 }
 
 export interface Role {
-  id: string
-  name: string
-  prompt: string
-  documentAccess: string[] // Array of document IDs
+  id: string;
+  name: string;
+  prompt: string;
+  documentAccess: string[]; // Array of document IDs
 }
 
 export interface LLM {
-  provider: string
-  name: string
-  GDPR_compliant: boolean
-  description: string
+  provider: string;
+  name: string;
+  GDPR_compliant: boolean;
+  description: string;
 }
 
-const backend_api_url = process.env.BACKEND_API_URL || "http://localhost:8000"
+const backend_api_url = process.env.BACKEND_API_URL || "http://localhost:8000";
 
 interface DatabaseAgent {
-  id: string // optional for creation
-  name: string
-  description: string
-  prompt: string
-  llm_provider: string
-  llm_model: string // TODO: Change to LLM model
-  llm_temperature: number
-  llm_max_tokens: number
-  llm_api_key: string
-  access_key: string[] // may change later
-  retrieval_method?: string
-  embedding_model?: string // optional for now
-  status?: "active" | "inactive"
-  response_format: "text" | "structured"
-  enableMemory: boolean // not in backend
-  enableWebSearch: boolean // not in backend and also we wont do this low key
-  last_updated?: string
-  roles: DatabaseRole[]
+  id: string; // optional for creation
+  name: string;
+  description: string;
+  prompt: string;
+  llm_provider: string;
+  llm_model: string; // TODO: Change to LLM model
+  llm_temperature: number;
+  llm_max_tokens: number;
+  llm_api_key: string;
+  access_key: string[]; // may change later
+  retrieval_method?: string;
+  embedding_model?: string; // optional for now
+  status?: "active" | "inactive";
+  response_format: "text" | "structured";
+  enableMemory: boolean; // not in backend
+  enableWebSearch: boolean; // not in backend and also we wont do this low key
+  last_updated?: string;
+  roles: DatabaseRole[];
   // RAG retrieval parameters
-  top_k?: number
-  similarity_threshold?: number
-  hybrid_search_alpha?: number
+  top_k?: number;
+  similarity_threshold?: number;
+  hybrid_search_alpha?: number;
 }
 
 interface DatabaseRole {
-  name: string
-  description: string
-  document_access: string[]
+  name: string;
+  description: string;
+  document_access: string[];
 }
 
 export const agentsClient = {
   async getAll(): Promise<DatabaseAgent[]> {
-    const res = await fetch("/api/fetch-agents")
-    if (!res.ok) throw new Error("Failed to fetch agents")
-    return res.json()
+    const res = await fetch("/api/fetch-agents");
+    if (!res.ok) throw new Error("Failed to fetch agents");
+    return res.json();
   },
 
   convertFromDB(agents: DatabaseAgent[]): AgentUIState[] {
@@ -150,8 +150,8 @@ export const agentsClient = {
           topK: agent.top_k ?? 5,
           similarityThreshold: agent.similarity_threshold ?? 0.5,
           hybridSearchAlpha: agent.hybrid_search_alpha ?? 0.75,
-        } as AgentUIState)
-    )
+        }) as AgentUIState
+    );
   },
 
   convertToDB(agents: AgentUIState[]): DatabaseAgent[] {
@@ -183,8 +183,8 @@ export const agentsClient = {
           top_k: agent.topK,
           similarity_threshold: agent.similarityThreshold,
           hybrid_search_alpha: agent.hybridSearchAlpha,
-        } as DatabaseAgent)
-    )
+        }) as DatabaseAgent
+    );
   },
 
   async createNewAgent(
@@ -193,11 +193,11 @@ export const agentsClient = {
     embedding: string,
     model?: LLM | null
   ): Promise<AgentUIState> {
-    const agent = defaultAgent()
-    agent.name = name
-    agent.description = description
-    agent.embeddingModel = embedding
-    agent.model = model || null
+    const agent = defaultAgent();
+    agent.name = name;
+    agent.description = description;
+    agent.embeddingModel = embedding;
+    agent.model = model || null;
     // Create a default role with the same name as the agent
     agent.roles = [
       {
@@ -206,8 +206,8 @@ export const agentsClient = {
         prompt: "",
         documentAccess: [],
       },
-    ]
-    return this.updateAgent(agent)
+    ];
+    return this.updateAgent(agent);
   },
 
   async updateAgent(agent: AgentUIState): Promise<AgentUIState> {
@@ -217,11 +217,11 @@ export const agentsClient = {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(this.convertToDB([agent])[0]),
-    })
+    });
     if (!response.ok) {
-      throw new Error(`Failed to update agent: ${response.status}`)
+      throw new Error(`Failed to update agent: ${response.status}`);
     }
-    return await this.convertFromDB([await response.json()])[0]
+    return await this.convertFromDB([await response.json()])[0];
   },
   // Get an agent by ID
   async getAgentById(agentId: string): Promise<AgentUIState> {
@@ -230,11 +230,11 @@ export const agentsClient = {
       headers: {
         "Content-Type": "application/json",
       },
-    })
+    });
     if (!response.ok) {
-      throw new Error(`Failed to fetch agent: ${response.status}`)
+      throw new Error(`Failed to fetch agent: ${response.status}`);
     }
-    return await response.json()
+    return await response.json();
   },
 
   // Get all documents for an agent
@@ -244,16 +244,16 @@ export const agentsClient = {
       headers: {
         Accept: "application/json",
       },
-    })
+    });
 
     if (response.status !== 200) {
       // If agent not found or no documents, return empty array
       if (response.status === 404) {
-        return []
+        return [];
       }
-      throw new Error(`Failed to fetch documents: ${response.status}`)
+      throw new Error(`Failed to fetch documents: ${response.status}`);
     }
-    const data = await response.data
+    const data = await response.data;
 
     // Convert backend format to DocumentMetadata format
     return data.documents.map((doc: any) => ({
@@ -261,21 +261,23 @@ export const agentsClient = {
       name: doc.name,
       type: doc.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
       size: doc.size || "Unknown", // Use size from backend
-      uploadDate: doc.created_at ? new Date(doc.created_at).toISOString().split("T")[0] : "Unknown",
+      uploadDate: doc.created_at
+        ? new Date(doc.created_at).toISOString().split("T")[0]
+        : "Unknown",
       status: "ready" as const,
-    }))
+    }));
   },
 
   // Delete a document
   async deleteDocument(documentId: string, agentId: string): Promise<void> {
     const response = await axios.get("/api/delete-document", {
       params: { agentId: agentId, documentId: documentId },
-    })
+    });
     if (response.status !== 200) {
       if (response.status === 404) {
-        throw new Error("Document not found")
+        throw new Error("Document not found");
       }
-      throw new Error(`Failed to delete document: ${response.status}`)
+      throw new Error(`Failed to delete document: ${response.status}`);
     }
   },
-}
+};

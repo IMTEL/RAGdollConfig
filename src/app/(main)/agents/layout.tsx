@@ -10,5 +10,9 @@ export default function AgentsLayout({
   children: React.ReactNode;
 }) {
   const [client] = useState(() => new QueryClient());
-  return <QueryClientProvider client={client}><AgentProvider>{children}</AgentProvider></QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <AgentProvider>{children}</AgentProvider>
+    </QueryClientProvider>
+  );
 }

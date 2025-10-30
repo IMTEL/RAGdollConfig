@@ -48,7 +48,7 @@ export const authOptions = {
 
       if (Date.now() > token.sessionTokenExpiry) {
         if (Date.now() > token.refreshTokenExpiry)
-          throw new Error("Refresh token has expired")
+          throw new Error("Refresh token has expired");
 
         return await refreshToken(token);
       }
@@ -57,8 +57,8 @@ export const authOptions = {
   },
 
   pages: {
-    signIn: '/login',
-    error: '/login',
+    signIn: "/login",
+    error: "/login",
   },
 } as AuthOptions;
 
@@ -67,7 +67,7 @@ function getProviderToken(provider: string, account: any): string | null {
     case "google":
       return account?.id_token ?? null;
     case "dev":
-      return "dev"
+      return "dev";
     default:
       console.error("Provider not recognized");
       return null;
@@ -75,14 +75,13 @@ function getProviderToken(provider: string, account: any): string | null {
 }
 
 async function handleLogin(token: any, account: any, user: any): Promise<any> {
-
   const provider = account.provider;
   const bearer_token = getProviderToken(provider, account);
   const response = await axios.post(
     process.env.BACKEND_API_URL + "/api/login",
     {
       token: bearer_token,
-      provider: provider
+      provider: provider,
     },
     {
       headers: { "Content-Type": "application/json" },
@@ -95,9 +94,9 @@ async function handleLogin(token: any, account: any, user: any): Promise<any> {
     token.refreshToken = data.refresh_token;
     token.sessionTokenExpiry = Date.now() + parseInt(data.session_token_ttl);
     token.refreshTokenExpiry = Date.now() + parseInt(data.refresh_token_ttl);
-    token.name = data?.name ?? null
-    token.image = data?.picture ?? null
-  } else throw new Error("An error occured when trying to login")
+    token.name = data?.name ?? null;
+    token.image = data?.picture ?? null;
+  } else throw new Error("An error occured when trying to login");
 
   return token;
 }

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { SidebarLayout } from "@/components/layouts/sidebar-layout";
 
 /**export const metadata: Metadata = {
