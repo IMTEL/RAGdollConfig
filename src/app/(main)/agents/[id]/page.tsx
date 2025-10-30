@@ -53,6 +53,7 @@ import { TestAgent } from "@/components/agent-configuration/test-agent-button";
 import { AgentUIState, agentsClient, DocumentMetadata } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
+import { DeleteAgent } from "@/components/agent-configuration/delete-agent-button";
 
 const CHAT_WEBSITE_URL =
   process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
@@ -412,6 +413,7 @@ export default function AgentConfigurationPage({
             <Save className="mr-2 h-4 w-4" />
             Upload Changes
           </Button>
+          <DeleteAgent agent={agent} onSuccess={() => {router.push("/")}}/>
         </div>
       </div>
 
