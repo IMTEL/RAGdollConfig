@@ -413,7 +413,12 @@ export default function AgentConfigurationPage({
             <Save className="mr-2 h-4 w-4" />
             Upload Changes
           </Button>
-          <DeleteAgent agent={agent} onSuccess={() => {router.push("/")}}/>
+          <DeleteAgent
+            agent={agent}
+            onSuccess={() => {
+              router.push("/agents");
+            }}
+          />
         </div>
       </div>
 

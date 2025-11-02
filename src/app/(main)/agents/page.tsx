@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgentModal } from "@/components/agent-configuration/create-agent-modal";
+import { DeleteAgent } from "@/components/agent-configuration/delete-agent-button";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AgentUIState, defaultAgent } from "./agent_data";
 import { useAgents, useAgentActions } from "./agent_provider";
 
@@ -14,9 +16,12 @@ interface AgentCardProps {
 }
 
 function AgentCard({ agent }: AgentCardProps) {
+  const router = useRouter();
+  const { setAgents } = useAgentActions();
+
   return (
-    <Link href={`/agents/${agent.id}`}>
-      <div className="hover:bg-accent/50 space-y-4 rounded-lg border p-6 transition-colors">
+    <div className="group hover:bg-accent/50 relative rounded-lg border p-6 pb-12 transition-colors">
+      <Link href={`/agents/${agent.id}`} className="block space-y-4">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -39,8 +44,16 @@ function AgentCard({ agent }: AgentCardProps) {
         <div className="text-muted-foreground text-sm">
           Last updated {agent.lastUpdated}
         </div>
+      </Link>
+      <div className="absolute right-4 bottom-4">
+        <DeleteAgent
+          agent={agent}
+          onSuccess={() => {
+            setAgents((prev) => prev.filter((a) => a.id !== agent.id));
+          }}
+        />
       </div>
-    </Link>
+    </div>
   );
 }
 
