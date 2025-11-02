@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -359,7 +359,7 @@ export default function AgentConfigurationPage({
   };
 
   // Check if there are documents not accessed by any role
-  const getUnaccessedDocuments = () => {
+  const unaccessedDocuments = useMemo(() => {
     if (!agent.documents || agent.documents.length === 0) return [];
 
     const accessedDocIds = new Set<string>();
@@ -370,9 +370,7 @@ export default function AgentConfigurationPage({
     return agent.documents.filter(
       (doc) => doc.id && !accessedDocIds.has(doc.id)
     );
-  };
-
-  const unaccessedDocuments = getUnaccessedDocuments();
+  }, [agent.documents, agent.roles]);
 
   // Determine temperature max based on model provider
   const tempMax = agent.model?.provider?.toLowerCase() === "idun" ? 2 : 1;
@@ -687,9 +685,9 @@ export default function AgentConfigurationPage({
                         <div>Upload Date</div>
                         <div>Status</div>
                       </div>
-                      {agent.documents.map((document) => (
+                      {agent.documents.map((document, index) => (
                         <div
-                          key={document.id}
+                          key={document.id || `document-${index}`}
                           className="grid grid-cols-5 items-center gap-4 border-b p-3 last:border-b-0"
                         >
                           <div className="flex items-center gap-2">
