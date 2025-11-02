@@ -643,7 +643,12 @@ export default function AgentConfigurationPage({
                       </p>
                       <p className="text-sm text-yellow-700 dark:text-yellow-300">
                         Documents:{" "}
-                        {unaccessedDocuments.map((doc) => doc.name).join(", ")}
+                        {unaccessedDocuments.map((doc, index) => (
+                          <span key={doc.id || `unaccessed-${index}`}>
+                            {index > 0 ? ", " : ""}
+                            {doc.name}
+                          </span>
+                        ))}
                       </p>
                       <p className="text-sm text-yellow-700 dark:text-yellow-300">
                         Add a new role that has access to{" "}
