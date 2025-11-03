@@ -15,11 +15,11 @@ export async function GET(req: NextRequest) {
   const upstream = await axios.get(`${BACKEND_API_URL}/delete-agent`, {
     params: { agent_id: agentId },
     headers: {
-      Authorization: `Bearer ${sessionToken}`
+      Authorization: `Bearer ${sessionToken}`,
     },
   });
 
   return new NextResponse(null, {
-    status: upstream.status
+    status: upstream.status,
   });
 }

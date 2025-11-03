@@ -109,7 +109,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     agentsClient
       .getAll()
       .then((databaseContent) => {
-        let agents = agentsClient.convertFromDB(databaseContent);
+        const agents = agentsClient.convertFromDB(databaseContent);
         dispatch({ type: "SET_AGENTS", payload: () => agents });
         setIsLoading(false);
       })
