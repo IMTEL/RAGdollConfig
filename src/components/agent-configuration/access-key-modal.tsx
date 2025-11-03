@@ -51,7 +51,7 @@ export function AccessKeyModal({
     name: string,
     expiry_date: Date | null
   ): Promise<AccessKey | null> => {
-    var params = new URLSearchParams({
+    const params = new URLSearchParams({
       name: name,
       agent_id: agentId,
     });
