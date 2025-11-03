@@ -74,39 +74,6 @@ export default function AgentConfigurationPage({
     (agent) => agent.databaseId === id || agent.id === id
   );
 
-  if (!agent) {
-    return <div> Agent not found </div>;
-  }
-
-  // Load documents when the page opens
-  useEffect(() => {
-    // Only fetch if agent has a database ID and documents haven't been loaded yet
-    if (agent.databaseId && agent.documents === null) {
-      agentsClient
-        .getDocumentsForAgent(agent.databaseId)
-        .then((documents) => {
-          setAgent(agent.id, (prev) => ({ ...prev, documents }));
-        })
-        .catch((error) => {
-          console.error("Failed to load documents:", error);
-          // Set to empty array on error so we don't keep retrying
-          setAgent(agent.id, (prev) => ({ ...prev, documents: [] }));
-        });
-    }
-  }, [agent.databaseId, agent.documents, agent.id, setAgent]);
-
-  const registerUpdate = () => {
-    const last_updated = new Date().toLocaleString("nb-NO", {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
-    setAgent(agent.id, (prev) => ({
-      ...prev,
-      uploaded: false,
-      lastUpdated: last_updated,
-    }));
-  };
-
   const [dragActive, setDragActive] = useState(false);
   const [embeddingError, setEmbeddingError] = useState<{
     show: boolean;
@@ -121,16 +88,40 @@ export default function AgentConfigurationPage({
   });
   const [activeTab, setActiveTab] = useState("description");
 
-  const handleInputChange = (
-    field: keyof AgentUIState,
-    value: string | number | boolean | null
-  ) => {
-    registerUpdate();
-    setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
-  };
+  // Load documents when the page opens
+  useEffect(() => {
+    if (!agent) return;
+    // Only fetch if agent has a database ID and documents haven't been loaded yet
+    if (agent.databaseId && agent.documents === null) {
+      agentsClient
+        .getDocumentsForAgent(agent.databaseId)
+        .then((documents) => {
+          setAgent(agent.id, (prev) => ({ ...prev, documents }));
+        })
+        .catch((error) => {
+          console.error("Failed to load documents:", error);
+          // Set to empty array on error so we don't keep retrying
+          setAgent(agent.id, (prev) => ({ ...prev, documents: [] }));
+        });
+    }
+  }, [agent?.databaseId, agent?.documents, agent?.id, setAgent]);
+
+  const registerUpdate = useCallback(() => {
+    if (!agent) return;
+    const last_updated = new Date().toLocaleString("nb-NO", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+    setAgent(agent.id, (prev) => ({
+      ...prev,
+      uploaded: false,
+      lastUpdated: last_updated,
+    }));
+  }, [agent, setAgent]);
 
   const handleFileUpload = useCallback(
     async (files: FileList) => {
+      if (!agent) return;
       registerUpdate();
 
       // Create temporary IDs for UI tracking
@@ -218,14 +209,69 @@ export default function AgentConfigurationPage({
           const result = response.data;
           console.log(`Successfully uploaded ${file.name}:`, result);
 
-          // Update document with actual ID from backend and set status to ready
+          // Update document with actual ID from backend - keep status as processing
+          // since the backend now processes asynchronously
           setDocuments(agent.id, (prev) =>
             prev.map((doc) =>
               doc.id === tempIds[index]
-                ? { ...doc, id: result.document_id, status: "ready" as const }
+                ? {
+                    ...doc,
+                    id: result.document_id,
+                    // Status stays as "processing" until we poll and confirm it's ready
+                  }
                 : doc
             )
           );
+
+          // Poll for upload status if task_id is provided
+          if (result.task_id) {
+            const pollStatus = async () => {
+              try {
+                const statusResponse = await axios.get(
+                  `/api/upload-status?taskId=${result.task_id}`
+                );
+                const statusData = statusResponse.data;
+
+                if (statusData.status === "complete") {
+                  // Update to ready when complete
+                  setDocuments(agent.id, (prev) =>
+                    prev.map((doc) =>
+                      doc.id === result.document_id
+                        ? { ...doc, status: "ready" as const }
+                        : doc
+                    )
+                  );
+                } else if (statusData.status === "failed") {
+                  // Update to error if failed
+                  setDocuments(agent.id, (prev) =>
+                    prev.map((doc) =>
+                      doc.id === result.document_id
+                        ? { ...doc, status: "error" as const }
+                        : doc
+                    )
+                  );
+                } else {
+                  // Still processing, poll again after 2 seconds
+                  setTimeout(pollStatus, 2000);
+                }
+              } catch (error) {
+                console.error("Failed to check upload status:", error);
+                // Don't update status on polling error, keep as processing
+              }
+            };
+
+            // Start polling after a short delay
+            setTimeout(pollStatus, 2000);
+          } else {
+            // Fallback: If no task_id, assume it's ready (for backward compatibility)
+            setDocuments(agent.id, (prev) =>
+              prev.map((doc) =>
+                doc.id === result.document_id
+                  ? { ...doc, status: "ready" as const }
+                  : doc
+              )
+            );
+          }
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
 
@@ -251,8 +297,73 @@ export default function AgentConfigurationPage({
         }
       }
     },
-    [agent.id, agent.databaseId]
+    [agent, registerUpdate, setDocuments, setEmbeddingError]
   );
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragActive(true);
+    },
+    [setDragActive]
+  );
+
+  const handleDragLeave = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragActive(false);
+    },
+    [setDragActive]
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragActive(false);
+      const files = e.dataTransfer.files;
+      if (files?.length) {
+        handleFileUpload(files);
+      }
+    },
+    [handleFileUpload, setDragActive]
+  );
+
+  // Check if there are documents not accessed by any role
+  const unaccessedDocuments = useMemo(() => {
+    if (!agent?.documents || agent.documents.length === 0) return [];
+
+    const accessedDocIds = new Set<string>();
+    agent.roles.forEach((role) => {
+      role.documentAccess.forEach((docId) => accessedDocIds.add(docId));
+    });
+
+    return agent.documents.filter(
+      (doc) => doc.id && !accessedDocIds.has(doc.id)
+    );
+  }, [agent?.documents, agent?.roles]);
+
+  // Clamp temperature if it exceeds the allowed max for the selected model
+  useEffect(() => {
+    if (!agent) return;
+    const tempMax = agent.model?.provider?.toLowerCase() === "idun" ? 2 : 1;
+    if (typeof agent.temperature === "number" && agent.temperature > tempMax) {
+      registerUpdate();
+      setAgent(agent.id, (prev) => ({ ...prev, temperature: tempMax }));
+    }
+  }, [agent, registerUpdate, setAgent]);
+
+  // Early return after all hooks
+  if (!agent) {
+    return <div>Agent not found</div>;
+  }
+
+  const handleInputChange = (
+    field: keyof AgentUIState,
+    value: string | number | boolean | null
+  ) => {
+    registerUpdate();
+    setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleDocumentDelete = async (documentId: string) => {
     if (!documentId) {
@@ -310,32 +421,10 @@ export default function AgentConfigurationPage({
     }
   };
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragActive(false);
-      const files = e.dataTransfer.files;
-      if (files?.length) {
-        handleFileUpload(files);
-      }
-    },
-    [handleFileUpload]
-  );
-
   const handleSave = () => {
     // TODO: Implement save functionality
     agentsClient.updateAgent(agent).then((newAgent) => {
-      setAgent(agent.id, (_) => newAgent);
+      setAgent(agent.id, () => newAgent);
       if (newAgent.databaseId !== agent.databaseId) {
         router.replace(`/agents/${newAgent.databaseId}`);
       }
@@ -358,30 +447,8 @@ export default function AgentConfigurationPage({
     }
   };
 
-  // Check if there are documents not accessed by any role
-  const unaccessedDocuments = useMemo(() => {
-    if (!agent.documents || agent.documents.length === 0) return [];
-
-    const accessedDocIds = new Set<string>();
-    agent.roles.forEach((role) => {
-      role.documentAccess.forEach((docId) => accessedDocIds.add(docId));
-    });
-
-    return agent.documents.filter(
-      (doc) => doc.id && !accessedDocIds.has(doc.id)
-    );
-  }, [agent.documents, agent.roles]);
-
   // Determine temperature max based on model provider
   const tempMax = agent.model?.provider?.toLowerCase() === "idun" ? 2 : 1;
-
-  // Clamp temperature if it exceeds the allowed max for the selected model
-  useEffect(() => {
-    if (typeof agent.temperature === "number" && agent.temperature > tempMax) {
-      registerUpdate();
-      setAgent(agent.id, (prev) => ({ ...prev, temperature: tempMax }));
-    }
-  }, [tempMax, agent.temperature, agent.id]);
 
   return (
     <div className="space-y-6">
@@ -466,7 +533,8 @@ export default function AgentConfigurationPage({
                 <div className="grid gap-2">
                   <Label htmlFor="name">Agent Name</Label>
                   <p className="text-muted-foreground text-sm">
-                    The agent will not use this, it's just for your reference.
+                    The agent will not use this, it&apos;s just for your
+                    reference.
                   </p>
                   <Input
                     id="name"
@@ -478,7 +546,8 @@ export default function AgentConfigurationPage({
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
                   <p className="text-muted-foreground text-sm">
-                    The agent will not use this, it's just for your reference.
+                    The agent will not use this, it&apos;s just for your
+                    reference.
                   </p>
                   <Textarea
                     id="description"
