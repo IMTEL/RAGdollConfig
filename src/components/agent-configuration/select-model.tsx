@@ -21,24 +21,32 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { LLM } from "@/app/(main)/agents/agent_data";
 import axios from "axios";
-import { da } from "date-fns/locale";
 
 interface SelectAgentProps {
   selectedModel?: LLM | null;
   onChange?: (model: LLM | null) => void;
+  allowedProviders?: string[];
+  disabled?: boolean;
 }
 
-const RAGDOLL_BASE_URL =
-  process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
-
-export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
+export function SelectModel({
+  selectedModel,
+  onChange,
+  allowedProviders,
+  disabled,
+}: SelectAgentProps) {
   const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
   const [pendingModel, setPendingModel] = useState<LLM | null>(null);
   const [models, setModels] = useState<LLM[] | null>(null);
+
+  const normalizedAllowedProviders = useMemo(() => {
+    if (!allowedProviders?.length) return null;
+    return allowedProviders.map((provider) => provider.toLowerCase());
+  }, [allowedProviders]);
 
   useEffect(() => {
     const getModels = async () => {
@@ -52,8 +60,27 @@ export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
     getModels();
   }, []);
 
+  const filteredModels = useMemo(() => {
+    if (!models) return null;
+    if (!normalizedAllowedProviders?.length) return models;
+    return models.filter((model) =>
+      normalizedAllowedProviders.includes(model.provider.toLowerCase())
+    );
+  }, [models, normalizedAllowedProviders]);
+
+  useEffect(() => {
+    if (!selectedModel) return;
+    if (!normalizedAllowedProviders?.length) return;
+    if (
+      !normalizedAllowedProviders.includes(selectedModel.provider.toLowerCase())
+    ) {
+      onChange?.(null);
+    }
+  }, [normalizedAllowedProviders, onChange, selectedModel]);
+
   const onSelectModel = (value: string) => {
-    const model = models?.find((model) => getKey(model) === value) ?? null;
+    const model =
+      filteredModels?.find((item) => getKey(item) === value) ?? null;
 
     if (!model?.GDPR_compliant) {
       setShowGDPRWarning(true);
@@ -77,31 +104,45 @@ export function SelectModel({ selectedModel, onChange }: SelectAgentProps) {
     return llm.provider + llm.name;
   };
 
+  const selectDisabled =
+    disabled || filteredModels === null || filteredModels.length === 0;
+
+  const placeholderText = (() => {
+    if (models === null) return "Loading models...";
+    if (filteredModels !== null && filteredModels.length === 0)
+      return "No models available";
+    return "Select a LLM";
+  })();
+
   return (
     <div>
       <div>
         <Select
           value={getKey(selectedModel) ?? ""}
           onValueChange={onSelectModel}
-          disabled={models === null}
+          disabled={selectDisabled}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full">
             {models === null ? (
-              <span className="text-muted-foreground">Loading models...</span>
+              <span className="text-muted-foreground">{placeholderText}</span>
             ) : (
-              <SelectValue placeholder="Select a LLM" />
+              <SelectValue placeholder={placeholderText} />
             )}
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               <SelectLabel>Select an LLM</SelectLabel>
-              {Array.isArray(models)
-                ? models.map((model) => (
-                    <SelectItem key={getKey(model)} value={getKey(model)}>
-                      {model.provider + ": " + model.name}
-                    </SelectItem>
-                  ))
-                : ""}
+              {Array.isArray(filteredModels) && filteredModels.length > 0 ? (
+                filteredModels.map((model) => (
+                  <SelectItem key={getKey(model)} value={getKey(model)}>
+                    {model.provider + ": " + model.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="text-muted-foreground px-3 py-2 text-sm">
+                  No models available
+                </div>
+              )}
             </SelectGroup>
           </SelectContent>
         </Select>

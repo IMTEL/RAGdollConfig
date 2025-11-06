@@ -18,6 +18,8 @@ interface SelectEmbeddingProps {
   selectedEmbedding?: string | null;
   onChange?: (embedding: string | null) => void;
   required?: boolean;
+  allowedProviders?: string[];
+  disabled?: boolean;
 }
 
 const RAGDOLL_BASE_URL =
@@ -44,6 +46,8 @@ export function SelectEmbedding({
   selectedEmbedding,
   onChange,
   required,
+  allowedProviders,
+  disabled,
 }: SelectEmbeddingProps) {
   // Use TanStack Query to fetch embedding models
   const {
@@ -58,9 +62,23 @@ export function SelectEmbedding({
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (formerly cacheTime)
   });
 
+  const normalizedAllowedProviders = useMemo(() => {
+    if (!allowedProviders?.length) return null;
+    return allowedProviders.map((provider) => provider.toLowerCase());
+  }, [allowedProviders]);
+
+  const filteredEmbeddings = useMemo(() => {
+    if (!embeddingModels) return [] as string[];
+    if (!normalizedAllowedProviders?.length) return embeddingModels;
+    return embeddingModels.filter((model) => {
+      const provider = model.split(":", 1)[0]?.toLowerCase();
+      return normalizedAllowedProviders.includes(provider);
+    });
+  }, [embeddingModels, normalizedAllowedProviders]);
+
   const onSelectEmbedding = (value: string) => {
     const embedding =
-      embeddingModels.find((model) => getKey(model) === value) ?? null;
+      filteredEmbeddings.find((model) => getKey(model) === value) ?? null;
     onChange?.(embedding ?? null);
   };
 
@@ -113,7 +131,7 @@ export function SelectEmbedding({
   }
 
   // Handle empty state
-  if (embeddingModels.length === 0) {
+  if ((filteredEmbeddings?.length ?? 0) === 0) {
     return (
       <Select disabled>
         <SelectTrigger
@@ -134,6 +152,7 @@ export function SelectEmbedding({
         value={getKey(selectedEmbedding) ?? ""}
         onValueChange={onSelectEmbedding}
         required={required}
+        disabled={disabled}
       >
         <SelectTrigger
           className={cn(
@@ -148,7 +167,7 @@ export function SelectEmbedding({
         <SelectContent>
           <SelectGroup>
             <SelectLabel>Select an embedding model</SelectLabel>
-            {embeddingModels.map((model) => (
+            {filteredEmbeddings.map((model) => (
               <SelectItem
                 key={getKey(model)}
                 value={getKey(model)}

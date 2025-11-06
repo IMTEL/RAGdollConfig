@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, ChevronDown, LogOut, User, Zap } from "lucide-react";
+import { Bot, ChevronDown, Key, LogOut, User, Zap } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -28,6 +28,11 @@ const navigationItems = [
     title: "Agents",
     url: "/agents",
     icon: Bot,
+  },
+  {
+    title: "API Keys",
+    url: "/api-keys",
+    icon: Key,
   },
 ];
 

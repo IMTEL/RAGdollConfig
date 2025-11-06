@@ -22,6 +22,8 @@ export interface AgentUIState {
   maxTokens: number;
   model: LLM | null;
   embeddingModel: string;
+  llmApiKey: string | null;
+  embeddingApiKey: string | null;
   status: "active" | "inactive";
   enableMemory: boolean;
   enableWebSearch: boolean;
@@ -47,6 +49,8 @@ export function defaultAgent(): AgentUIState {
     maxTokens: 1000,
     model: null,
     embeddingModel: "",
+    llmApiKey: null,
+    embeddingApiKey: null,
     status: "active",
     enableMemory: false,
     enableWebSearch: false,
@@ -86,10 +90,11 @@ interface DatabaseAgent {
   llm_model: string; // TODO: Change to LLM model
   llm_temperature: number;
   llm_max_tokens: number;
-  llm_api_key: string;
+  llm_api_key: string | null;
   access_key: string[]; // may change later
   retrieval_method?: string;
   embedding_model?: string; // optional for now
+  embedding_api_key: string | null;
   status?: "active" | "inactive";
   response_format: "text" | "structured";
   enableMemory: boolean; // not in backend
@@ -137,6 +142,8 @@ export const agentsClient = {
           enableMemory: agent.enableMemory,
           enableWebSearch: agent.enableWebSearch,
           embeddingModel: agent.embedding_model,
+          llmApiKey: agent.llm_api_key ?? null,
+          embeddingApiKey: agent.embedding_api_key ?? null,
           responseFormat: agent.response_format,
           documents: null,
           roles: agent.roles.map((role, index) => ({
@@ -155,49 +162,64 @@ export const agentsClient = {
   },
 
   convertToDB(agents: AgentUIState[]): DatabaseAgent[] {
-    return agents.map(
-      (agent) =>
-        ({
-          id: agent.databaseId,
-          name: agent.name,
-          description: agent.description,
-          prompt: agent.systemPrompt,
-          roles: agent.roles.map((role) => ({
-            name: role.name,
-            description: role.prompt,
-            document_access: role.documentAccess,
-          })),
-          llm_provider: agent.model?.provider || "idun",
-          llm_model: agent.model?.name || "none",
-          llm_temperature: agent.temperature,
-          llm_max_tokens: agent.maxTokens,
-          llm_api_key: "sk-1234567890abcdef",
-          access_key: [],
-          retrieval_method: "semantic",
-          embedding_model: agent.embeddingModel,
-          status: agent.status,
-          response_format: agent.responseFormat,
-          last_updated: agent.lastUpdated,
-          enableMemory: agent.enableMemory,
-          enableWebSearch: agent.enableWebSearch,
-          top_k: agent.topK,
-          similarity_threshold: agent.similarityThreshold,
-          hybrid_search_alpha: agent.hybridSearchAlpha,
-        }) as DatabaseAgent
-    );
+    return agents.map((agent) => {
+      const llmApiKey = agent.llmApiKey?.trim();
+      const embeddingApiKey = agent.embeddingApiKey?.trim();
+
+      if (!llmApiKey) {
+        throw new Error("LLM API key is required when saving an agent");
+      }
+
+      if (!embeddingApiKey) {
+        throw new Error("Embedding API key is required when saving an agent");
+      }
+
+      return {
+        id: agent.databaseId,
+        name: agent.name,
+        description: agent.description,
+        prompt: agent.systemPrompt,
+        roles: agent.roles.map((role) => ({
+          name: role.name,
+          description: role.prompt,
+          document_access: role.documentAccess,
+        })),
+        llm_provider: agent.model?.provider || "idun",
+        llm_model: agent.model?.name || "none",
+        llm_temperature: agent.temperature,
+        llm_max_tokens: agent.maxTokens,
+        llm_api_key: llmApiKey,
+        embedding_api_key: embeddingApiKey,
+        access_key: [],
+        retrieval_method: "semantic",
+        embedding_model: agent.embeddingModel,
+        status: agent.status,
+        response_format: agent.responseFormat,
+        last_updated: agent.lastUpdated,
+        enableMemory: agent.enableMemory,
+        enableWebSearch: agent.enableWebSearch,
+        top_k: agent.topK,
+        similarity_threshold: agent.similarityThreshold,
+        hybrid_search_alpha: agent.hybridSearchAlpha,
+      } as DatabaseAgent;
+    });
   },
 
   async createNewAgent(
     name: string,
     description: string,
     embedding: string,
-    model?: LLM | null
+    model?: LLM | null,
+    llmApiKey?: string | null,
+    embeddingApiKey?: string | null
   ): Promise<AgentUIState> {
     const agent = defaultAgent();
     agent.name = name;
     agent.description = description;
     agent.embeddingModel = embedding;
     agent.model = model || null;
+    agent.llmApiKey = llmApiKey ?? null;
+    agent.embeddingApiKey = embeddingApiKey ?? null;
     // Create a default role with the same name as the agent
     agent.roles = [
       {
