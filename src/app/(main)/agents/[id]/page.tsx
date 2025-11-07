@@ -129,6 +129,106 @@ export default function AgentConfigurationPage({
     setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
   };
 
+  const pollUploadStatus = useCallback(
+    async ({
+      taskId,
+      tempId,
+      fileName,
+      agentId,
+      backendAgentId,
+    }: {
+      taskId: string;
+      tempId: string;
+      fileName: string;
+      agentId: string;
+      backendAgentId: string;
+    }) => {
+      const wait = (ms: number) =>
+        new Promise((resolve) => {
+          setTimeout(resolve, ms);
+        });
+
+      if (!backendAgentId) {
+        return;
+      }
+
+      while (true) {
+        try {
+          const statusResponse = await axios.get("/api/upload-status", {
+            params: { taskId },
+          });
+
+          if (statusResponse.status === 200) {
+            const statusData = statusResponse.data;
+            const taskStatus = statusData.status;
+
+            if (taskStatus === "complete" && statusData.document_id) {
+              const backendDocuments =
+                await agentsClient.getDocumentsForAgent(backendAgentId);
+
+              const readyDoc =
+                backendDocuments.find(
+                  (doc) => doc.id === statusData.document_id
+                ) ?? backendDocuments.find((doc) => doc.name === fileName);
+
+              setDocuments(agentId, (prev) => {
+                const others = prev.filter(
+                  (doc) =>
+                    doc.id !== tempId && doc.id !== statusData.document_id
+                );
+
+                if (readyDoc) {
+                  return [...others, { ...readyDoc, status: "ready" }];
+                }
+
+                const placeholder = prev.find((doc) => doc.id === tempId);
+                if (!placeholder) {
+                  return others;
+                }
+
+                return [
+                  ...others,
+                  {
+                    ...placeholder,
+                    id: statusData.document_id,
+                    status: "ready" as const,
+                  },
+                ];
+              });
+
+              return;
+            }
+
+            if (taskStatus === "failed" || taskStatus === "error") {
+              setDocuments(agentId, (prev) =>
+                prev.map((doc) =>
+                  doc.id === tempId ? { ...doc, status: "error" as const } : doc
+                )
+              );
+
+              setEmbeddingError({
+                show: true,
+                title: "Upload Failed",
+                message:
+                  statusData.message ||
+                  "Document processing failed. Please try again.",
+                fileName,
+              });
+
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Failed to poll upload status:", error);
+          // Continue polling on transient errors
+        }
+
+        await wait(2000);
+      }
+    },
+    [setDocuments, setEmbeddingError]
+  );
+
   const handleFileUpload = useCallback(
     async (files: FileList) => {
       registerUpdate();
@@ -218,14 +318,43 @@ export default function AgentConfigurationPage({
           const result = response.data;
           console.log(`Successfully uploaded ${file.name}:`, result);
 
-          // Update document with actual ID from backend and set status to ready
-          setDocuments(agent.id, (prev) =>
-            prev.map((doc) =>
-              doc.id === tempIds[index]
-                ? { ...doc, id: result.document_id, status: "ready" as const }
-                : doc
-            )
-          );
+          const backendAgentId = agent.databaseId || agent.id;
+          const taskId: string | undefined = result?.task_id;
+
+          if (taskId) {
+            void pollUploadStatus({
+              taskId,
+              tempId: tempIds[index],
+              fileName: file.name,
+              agentId: agent.id,
+              backendAgentId,
+            }).catch((error) =>
+              console.error("Failed to track upload completion:", error)
+            );
+          } else if (backendAgentId) {
+            // Fallback: refresh documents once if no task tracking information is returned
+            try {
+              const backendDocuments =
+                await agentsClient.getDocumentsForAgent(backendAgentId);
+              const readyDoc = backendDocuments.find(
+                (doc) => doc.name === file.name
+              );
+
+              if (readyDoc) {
+                setDocuments(agent.id, (prev) => {
+                  const others = prev.filter(
+                    (doc) => doc.id !== tempIds[index]
+                  );
+                  return [...others, { ...readyDoc, status: "ready" as const }];
+                });
+              }
+            } catch (refreshError) {
+              console.error(
+                "Failed to refresh documents after upload:",
+                refreshError
+              );
+            }
+          }
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
 
@@ -251,7 +380,13 @@ export default function AgentConfigurationPage({
         }
       }
     },
-    [agent.id, agent.databaseId]
+    [
+      agent.id,
+      agent.databaseId,
+      pollUploadStatus,
+      setDocuments,
+      setEmbeddingError,
+    ]
   );
 
   const handleDocumentDelete = async (documentId: string) => {
