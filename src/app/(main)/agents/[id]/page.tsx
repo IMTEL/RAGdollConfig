@@ -120,6 +120,7 @@ export default function AgentConfigurationPage({
     fileName: "",
   });
   const [activeTab, setActiveTab] = useState("description");
+  const [useGraphSearch, setUseGraphSearch] = useState(false);
 
   const handleInputChange = (
     field: keyof AgentUIState,
@@ -892,6 +893,37 @@ export default function AgentConfigurationPage({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="graph-search-toggle">
+                        Retrieval Mode
+                      </Label>
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground text-sm">
+                          Hybrid
+                        </span>
+                        <Switch
+                          id="graph-search-toggle"
+                          checked={useGraphSearch}
+                          onCheckedChange={setUseGraphSearch}
+                          aria-describedby="graph-search-helper"
+                        />
+                        <span className="text-muted-foreground text-sm">
+                          Graph
+                        </span>
+                      </div>
+                    </div>
+                    {useGraphSearch && (
+                      <p
+                        id="graph-search-helper"
+                        className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800"
+                      >
+                        Not implemented.
+                      </p>
+                    )}
+                  </div>
+                </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="topK">Maximum Number of References</Label>
