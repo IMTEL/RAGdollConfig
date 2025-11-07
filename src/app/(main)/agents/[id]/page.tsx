@@ -866,10 +866,15 @@ export default function AgentConfigurationPage({
                   <SelectModel
                     selectedModel={agent.model}
                     onChange={(model) => {
-                      console.log("Selected model:", model);
                       registerUpdate();
                       setAgent(agent.id, (a) => ({ ...a, model }));
                     }}
+                    allowedProviders={
+                      agent.model?.provider ? [agent.model.provider] : undefined
+                    }
+                    provider={agent.model?.provider ?? null}
+                    apiKey={agent.llmApiKey}
+                    disabled={!agent.llmApiKey}
                   />
                 </div>
                 <div className="grid gap-2">

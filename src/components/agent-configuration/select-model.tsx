@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LLM } from "@/app/(main)/agents/agent_data";
 import axios from "axios";
@@ -30,6 +30,10 @@ interface SelectAgentProps {
   selectedModel?: LLM | null;
   onChange?: (model: LLM | null) => void;
   allowedProviders?: string[];
+  provider?: string | null;
+  apiKey?: string | null;
+  isApiKeyLoading?: boolean;
+  apiKeyError?: string | null;
   disabled?: boolean;
 }
 
@@ -37,11 +41,18 @@ export function SelectModel({
   selectedModel,
   onChange,
   allowedProviders,
+  provider,
+  apiKey,
+  isApiKeyLoading,
+  apiKeyError,
   disabled,
 }: SelectAgentProps) {
   const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
   const [pendingModel, setPendingModel] = useState<LLM | null>(null);
   const [models, setModels] = useState<LLM[] | null>(null);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const lastRequest = useRef<{ provider: string; apiKey: string } | null>(null);
 
   const normalizedAllowedProviders = useMemo(() => {
     if (!allowedProviders?.length) return null;
@@ -49,16 +60,68 @@ export function SelectModel({
   }, [allowedProviders]);
 
   useEffect(() => {
-    const getModels = async () => {
-      const response = await axios.get("/api/get-models");
-      if (response.status !== 200) {
-        console.error("Failed to load models");
+    if (!provider || !apiKey) {
+      if (selectedModel) {
+        onChange?.(null);
       }
-      const data = await response.data;
-      setModels(data as LLM[]);
+      setModels(null);
+      setFetchError(null);
+      setIsLoadingModels(false);
+      lastRequest.current = null;
+      return;
+    }
+
+    const normalizedProvider = provider.toLowerCase().trim();
+    const requestSignature = { provider: normalizedProvider, apiKey };
+    lastRequest.current = requestSignature;
+    let cancelled = false;
+
+    const loadModels = async () => {
+      setIsLoadingModels(true);
+      setFetchError(null);
+      try {
+        const response = await axios.post("/api/get-models", {
+          provider: normalizedProvider,
+          apiKey,
+        });
+        if (cancelled) return;
+
+        const data = response.data;
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid response format");
+        }
+        if (
+          lastRequest.current?.provider === normalizedProvider &&
+          lastRequest.current?.apiKey === apiKey
+        ) {
+          setModels(data as LLM[]);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setModels([]);
+        if (axios.isAxiosError(error)) {
+          const message =
+            (error.response?.data as { error?: string })?.error ??
+            error.message;
+          setFetchError(message ?? "Failed to load models");
+        } else if (error instanceof Error) {
+          setFetchError(error.message);
+        } else {
+          setFetchError("Failed to load models");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingModels(false);
+        }
+      }
     };
-    getModels();
-  }, []);
+
+    void loadModels();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiKey, onChange, provider, selectedModel]);
 
   const filteredModels = useMemo(() => {
     if (!models) return null;
@@ -70,13 +133,14 @@ export function SelectModel({
 
   useEffect(() => {
     if (!selectedModel) return;
-    if (!normalizedAllowedProviders?.length) return;
-    if (
-      !normalizedAllowedProviders.includes(selectedModel.provider.toLowerCase())
-    ) {
+    if (!filteredModels) return;
+    const stillAvailable = filteredModels.some(
+      (model) => getKey(model) === getKey(selectedModel)
+    );
+    if (!stillAvailable) {
       onChange?.(null);
     }
-  }, [normalizedAllowedProviders, onChange, selectedModel]);
+  }, [filteredModels, onChange, selectedModel]);
 
   const onSelectModel = (value: string) => {
     const model =
@@ -105,13 +169,30 @@ export function SelectModel({
   };
 
   const selectDisabled =
-    disabled || filteredModels === null || filteredModels.length === 0;
+    disabled ||
+    !provider ||
+    !apiKey ||
+    isApiKeyLoading ||
+    filteredModels === null ||
+    filteredModels.length === 0 ||
+    !!fetchError;
+
+  useEffect(() => {
+    if (fetchError && selectedModel) {
+      onChange?.(null);
+    }
+  }, [fetchError, onChange, selectedModel]);
 
   const placeholderText = (() => {
-    if (models === null) return "Loading models...";
+    if (isApiKeyLoading) return "Loading API key...";
+    if (apiKeyError) return apiKeyError;
+    if (!provider || !apiKey) return "Select an API key first";
+    if (isLoadingModels) return "Loading models...";
+    if (fetchError) return fetchError;
     if (filteredModels !== null && filteredModels.length === 0)
       return "No models available";
-    return "Select a LLM";
+    if (models === null) return "Loading models...";
+    return "Select an LLM";
   })();
 
   return (
@@ -123,7 +204,7 @@ export function SelectModel({
           disabled={selectDisabled}
         >
           <SelectTrigger className="w-full">
-            {models === null ? (
+            {isLoadingModels ? (
               <span className="text-muted-foreground">{placeholderText}</span>
             ) : (
               <SelectValue placeholder={placeholderText} />
@@ -132,7 +213,11 @@ export function SelectModel({
           <SelectContent>
             <SelectGroup>
               <SelectLabel>Select an LLM</SelectLabel>
-              {Array.isArray(filteredModels) && filteredModels.length > 0 ? (
+              {fetchError ? (
+                <div className="text-muted-foreground px-3 py-2 text-sm">
+                  {fetchError}
+                </div>
+              ) : Array.isArray(filteredModels) && filteredModels.length > 0 ? (
                 filteredModels.map((model) => (
                   <SelectItem key={getKey(model)} value={getKey(model)}>
                     {model.provider + ": " + model.name}

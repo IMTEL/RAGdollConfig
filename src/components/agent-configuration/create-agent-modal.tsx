@@ -522,6 +522,10 @@ export function AgentModal({
               allowedProviders={
                 selectedLlmKey ? [selectedLlmKey.provider] : undefined
               }
+              provider={selectedLlmKey?.provider ?? null}
+              apiKey={llmApiKeyValue}
+              isApiKeyLoading={isFetchingLlmKey}
+              apiKeyError={llmKeyError}
               disabled={!selectedLlmKey || isFetchingLlmKey}
             />
             <p className="text-muted-foreground text-sm">
@@ -539,6 +543,10 @@ export function AgentModal({
                   ? [selectedEmbeddingKey.provider]
                   : undefined
               }
+              provider={selectedEmbeddingKey?.provider ?? null}
+              apiKey={embeddingApiKeyValue}
+              isApiKeyLoading={isFetchingEmbeddingKey}
+              apiKeyError={embeddingKeyError}
               disabled={!selectedEmbeddingKey || isFetchingEmbeddingKey}
             />
             <p className="text-muted-foreground text-sm">

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const upstream = await axios.post(
-      `${BACKEND_API_URL}/get_models`,
+      `${BACKEND_API_URL}/get_embedding_models`,
       {
         provider: payload.provider,
         api_key: payload.apiKey,
