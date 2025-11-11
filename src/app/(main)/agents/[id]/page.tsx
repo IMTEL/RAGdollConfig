@@ -161,40 +161,63 @@ export default function AgentConfigurationPage({
 
           if (statusResponse.status === 200) {
             const statusData = statusResponse.data;
-            const taskStatus = statusData.status;
+            const taskStatus: string | undefined = statusData.status;
 
-            if (taskStatus === "complete" && statusData.document_id) {
-              const backendDocuments =
+            const isCompleteStatus =
+              taskStatus === "complete" ||
+              taskStatus === "ready" ||
+              taskStatus === "processing_complete";
+
+            if (isCompleteStatus) {
+              const backendDocuments: DocumentMetadata[] =
                 await agentsClient.getDocumentsForAgent(backendAgentId);
 
-              const readyDoc =
-                backendDocuments.find(
-                  (doc) => doc.id === statusData.document_id
+              const readyDoc: DocumentMetadata | undefined =
+                backendDocuments.find((doc) =>
+                  statusData.document_id
+                    ? doc.id === statusData.document_id
+                    : false
                 ) ?? backendDocuments.find((doc) => doc.name === fileName);
 
+              if (!readyDoc) {
+                await wait(2000);
+                continue;
+              }
+
               setDocuments(agentId, (prev) => {
-                const others = prev.filter(
-                  (doc) =>
-                    doc.id !== tempId && doc.id !== statusData.document_id
+                const readyDocsById = new Set(
+                  backendDocuments
+                    .map((doc) => doc.id)
+                    .filter((value): value is string => Boolean(value))
+                );
+                const readyDocsByName = new Set(
+                  backendDocuments
+                    .map((doc) => doc.name)
+                    .filter((value): value is string => Boolean(value))
                 );
 
-                if (readyDoc) {
-                  return [...others, { ...readyDoc, status: "ready" }];
-                }
+                const hydratedReadyDocs = backendDocuments.map((doc) => ({
+                  ...doc,
+                  status: "ready" as const,
+                }));
 
-                const placeholder = prev.find((doc) => doc.id === tempId);
-                if (!placeholder) {
-                  return others;
-                }
+                const placeholders = prev.filter((doc) => {
+                  if (doc.id === tempId) {
+                    return false;
+                  }
 
-                return [
-                  ...others,
-                  {
-                    ...placeholder,
-                    id: statusData.document_id,
-                    status: "ready" as const,
-                  },
-                ];
+                  if (doc.id && readyDocsById.has(doc.id)) {
+                    return false;
+                  }
+
+                  if (readyDocsByName.has(doc.name)) {
+                    return false;
+                  }
+
+                  return doc.status !== "ready";
+                });
+
+                return [...hydratedReadyDocs, ...placeholders];
               });
 
               return;
