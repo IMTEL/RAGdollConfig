@@ -1,10 +1,11 @@
 "use client";
-import { Bot, Plus, Loader2 } from "lucide-react";
+import { Bot, Plus, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgentModal } from "@/components/agent-configuration/create-agent-modal";
 import { DeleteAgent } from "@/components/agent-configuration/delete-agent-button";
+import { TestAgent } from "@/components/agent-configuration/test-agent-button";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -45,7 +46,16 @@ function AgentCard({ agent }: AgentCardProps) {
           Last updated {agent.lastUpdated}
         </div>
       </Link>
-      <div className="absolute right-4 bottom-4">
+      <div className="absolute right-4 bottom-4 flex items-center gap-2">
+        <TestAgent
+          agent={agent}
+          size="icon"
+          variant="ghost"
+          className="bg-transparent transition-colors hover:bg-blue-500 hover:text-white"
+          label={null}
+          icon={<MessageSquare className="h-4 w-4" />}
+          ariaLabel="Open chat"
+        />
         <DeleteAgent
           agent={agent}
           onSuccess={() => {

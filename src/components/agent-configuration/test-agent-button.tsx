@@ -3,7 +3,7 @@
 import { AgentUIState } from "@/app/(main)/agents/agent_data";
 import axios from "axios";
 import { Bot } from "lucide-react";
-import { useEffect } from "react";
+import { ComponentProps, ReactNode, useEffect } from "react";
 import { Button } from "../ui/button";
 import { AccessKey } from "./access-key-card";
 
@@ -12,9 +12,23 @@ const CHAT_WEBSITE_URL =
 
 interface TestAgentProps {
   agent: AgentUIState;
+  label?: ReactNode;
+  variant?: ComponentProps<typeof Button>["variant"];
+  size?: ComponentProps<typeof Button>["size"];
+  className?: string;
+  icon?: ReactNode;
+  ariaLabel?: string;
 }
 
-export function TestAgent({ agent }: TestAgentProps) {
+export function TestAgent({
+  agent,
+  label,
+  variant = "outline",
+  size,
+  className,
+  icon,
+  ariaLabel,
+}: TestAgentProps) {
   const getExpiryTime = () => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
@@ -118,12 +132,30 @@ export function TestAgent({ agent }: TestAgentProps) {
     }
   };
 
+  const resolvedLabel = label === undefined ? "Talk to Agent" : label;
+  const iconElement = icon ?? <Bot className="h-4 w-4" />;
+  const computedAriaLabel =
+    ariaLabel ||
+    (typeof resolvedLabel === "string" && resolvedLabel
+      ? resolvedLabel
+      : "Talk to Agent");
+
   useEffect(() => {}, []);
 
   return (
-    <Button variant="outline" onClick={handleTestAgent}>
-      <Bot className="mr-2 h-4 w-4" />
-      Talk to Agent
+    <Button
+      variant={variant}
+      size={size}
+      className={className}
+      aria-label={computedAriaLabel}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        handleTestAgent();
+      }}
+    >
+      <span className={resolvedLabel ? "mr-2" : undefined}>{iconElement}</span>
+      {resolvedLabel}
     </Button>
   );
 }
