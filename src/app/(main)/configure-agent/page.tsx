@@ -1,10 +1,6 @@
-"use client";
 import { Bot, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AgentModal } from "@/components/ui/modal";
-import { useState } from "react";
-import Link from "next/link";
 
 interface Agent {
   id: number;
@@ -20,11 +16,11 @@ interface AgentCardProps {
 
 function AgentCard({ agent }: AgentCardProps) {
   return (
-    <div className="rounded-lg border p-6 space-y-4 hover:bg-accent/50 transition-colors">
+    <div className="hover:bg-accent/50 space-y-4 rounded-lg border p-6 transition-colors">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-muted-foreground" />
+            <Bot className="text-muted-foreground h-5 w-5" />
             <h3 className="text-lg font-semibold">{agent.name}</h3>
             <Badge
               variant={agent.status === "active" ? "default" : "secondary"}
@@ -35,14 +31,12 @@ function AgentCard({ agent }: AgentCardProps) {
           <p className="text-muted-foreground">{agent.description}</p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/agents/${agent.id}`}>
-            <Button variant="outline" size="sm">
-              Configure
-            </Button>
-          </Link>
+          <Button variant="outline" size="sm">
+            Configure
+          </Button>
         </div>
       </div>
-      <div className="text-sm text-muted-foreground">
+      <div className="text-muted-foreground text-sm">
         Last updated {agent.lastUpdated}
       </div>
     </div>
@@ -51,7 +45,7 @@ function AgentCard({ agent }: AgentCardProps) {
 
 export default function AgentsPage() {
   // Mock data for demonstration
-  const [agents, setAgents] = useState<Agent[]>([
+  const agents: Agent[] = [
     {
       id: 1,
       name: "Customer Support Agent",
@@ -73,9 +67,7 @@ export default function AgentsPage() {
       status: "active",
       lastUpdated: "30 minutes ago",
     },
-  ]);
-
-  const [modalOpen, setModalOpen] = useState(false);
+  ];
 
   return (
     <div className="space-y-6">
@@ -86,32 +78,12 @@ export default function AgentsPage() {
             Manage your AI agents and their configurations
           </p>
         </div>
-        <Button 
-          onClick={() => setModalOpen(true)} 
-          className="cursor-pointer"
-        >
+        <Button>
           <Plus className="mr-2 h-4 w-4" />
           Create Agent
         </Button>
       </div>
-      <AgentModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreate={(agent) => {
-          // TODO: Save new agent to backend
-          setAgents([
-            ...agents,
-            {
-              id: agents.length + 1,
-              name: agent.name,
-              description: agent.description,
-              status: "active",
-              lastUpdated: "just now",
-            },
-          ]);
-          setModalOpen(false);
-        }}
-      />
+
       <div className="grid gap-4">
         {agents.map((agent) => (
           <AgentCard key={agent.id} agent={agent} />

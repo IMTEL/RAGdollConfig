@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
+"use client";
+import { SessionProvider } from "next-auth/react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SidebarLayout } from "@/components/layouts/sidebar-layout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,10 +13,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
+/**export const metadata: Metadata = {
   title: "RAGdoll Config",
   description: "Configuration interface for RAGdoll",
-};
+};*/
 
 export default function RootLayout({
   children,
@@ -25,11 +25,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <SidebarLayout>{children}</SidebarLayout>
-      </body>
+      <SessionProvider>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          {children}
+        </body>
+      </SessionProvider>
     </html>
   );
 }
