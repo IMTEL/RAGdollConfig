@@ -100,7 +100,7 @@ function AgentsPageContent() {
             Manage and configure your AI agents
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)} className="cursor-pointer">
+        <Button onClick={() => setModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Create New Agent
         </Button>

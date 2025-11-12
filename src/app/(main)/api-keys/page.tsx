@@ -381,11 +381,7 @@ export default function ApiKeysPage() {
             so keys can later be scoped to the right runtime components.
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={openModal}
-          className="w-full cursor-pointer sm:w-auto"
-        >
+        <Button type="button" onClick={openModal} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Add API key
         </Button>

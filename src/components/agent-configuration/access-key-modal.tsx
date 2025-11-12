@@ -161,7 +161,7 @@ export function AccessKeyModal({
             <button
               type="button"
               className={cn(
-                "bg-muted text-foreground cursor-pointer rounded-md px-4 py-2"
+                "bg-muted text-foreground hover:bg-muted/80 cursor-pointer rounded-md px-4 py-2 transition-colors"
               )}
               onClick={onClose}
             >
@@ -170,7 +170,7 @@ export function AccessKeyModal({
             <button
               type="submit"
               className={cn(
-                "bg-primary text-primary-foreground cursor-pointer rounded-md px-4 py-2"
+                "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer rounded-md px-4 py-2 transition-colors"
               )}
             >
               Create

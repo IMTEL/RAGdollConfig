@@ -432,11 +432,7 @@ export function AgentModal({
                 <SelectGroup>
                   <SelectLabel>Available API keys</SelectLabel>
                   {llmCompatibleKeys.map((key) => (
-                    <SelectItem
-                      key={key.id}
-                      value={key.id}
-                      className="cursor-pointer"
-                    >
+                    <SelectItem key={key.id} value={key.id}>
                       {key.label} · {key.redacted_key}
                     </SelectItem>
                   ))}
@@ -486,11 +482,7 @@ export function AgentModal({
                 <SelectGroup>
                   <SelectLabel>Available API keys</SelectLabel>
                   {embeddingCompatibleKeys.map((key) => (
-                    <SelectItem
-                      key={key.id}
-                      value={key.id}
-                      className="cursor-pointer"
-                    >
+                    <SelectItem key={key.id} value={key.id}>
                       {key.label} · {key.redacted_key}
                     </SelectItem>
                   ))}
@@ -558,7 +550,7 @@ export function AgentModal({
             <button
               type="button"
               className={cn(
-                "bg-muted text-foreground cursor-pointer rounded-md px-4 py-2"
+                "bg-muted text-foreground hover:bg-muted/80 cursor-pointer rounded-md px-4 py-2 transition-colors"
               )}
               onClick={() => {
                 resetForm();
@@ -570,7 +562,7 @@ export function AgentModal({
             <button
               type="submit"
               className={cn(
-                "bg-primary text-primary-foreground cursor-pointer rounded-md px-4 py-2"
+                "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer rounded-md px-4 py-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               )}
               disabled={loading || isFetchingLlmKey || isFetchingEmbeddingKey}
             >
@@ -590,10 +582,7 @@ export function AgentModal({
             <AlertDialogDescription>{validationMessage}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction
-              onClick={() => setShowValidationAlert(false)}
-              className="cursor-pointer"
-            >
+            <AlertDialogAction onClick={() => setShowValidationAlert(false)}>
               OK
             </AlertDialogAction>
           </AlertDialogFooter>
