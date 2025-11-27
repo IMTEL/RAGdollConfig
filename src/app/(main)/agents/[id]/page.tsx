@@ -947,6 +947,7 @@ export default function AgentConfigurationPage({
                     )}
                   </div>
                 </div>
+                {/* add here */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="topK">Maximum Number of References</Label>
@@ -1025,6 +1026,24 @@ export default function AgentConfigurationPage({
                     ({(agent.hybridSearchAlpha * 100).toFixed(0)}% semantic
                     search, {((1 - agent.hybridSearchAlpha) * 100).toFixed(0)}%
                     keyword search)
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="contextAwareRetrieval">
+                      Context-Aware Retrieval
+                    </Label>
+                    <Switch
+                      id="contextAwareRetrieval"
+                      checked={agent.contextAwareRetrieval}
+                      onCheckedChange={(checked) =>
+                        handleInputChange("contextAwareRetrieval", checked)
+                      }
+                    />
+                  </div>
+                  <p className="text-muted-foreground text-sm">
+                    If disabled, only the latest message will be used for
+                    retrieval.
                   </p>
                 </div>
               </CardContent>

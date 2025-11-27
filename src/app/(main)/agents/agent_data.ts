@@ -36,6 +36,7 @@ export interface AgentUIState {
   topK: number;
   similarityThreshold: number;
   hybridSearchAlpha: number;
+  contextAwareRetrieval: boolean;
 }
 
 export function defaultAgent(): AgentUIState {
@@ -62,6 +63,7 @@ export function defaultAgent(): AgentUIState {
     topK: 5,
     similarityThreshold: 0.5,
     hybridSearchAlpha: 0.75,
+    contextAwareRetrieval: true,
   };
 }
 
@@ -105,6 +107,7 @@ interface DatabaseAgent {
   top_k?: number;
   similarity_threshold?: number;
   hybrid_search_alpha?: number;
+  context_aware_retrieval?: boolean;
 }
 
 interface DatabaseRole {
@@ -157,6 +160,7 @@ export const agentsClient = {
           topK: agent.top_k ?? 5,
           similarityThreshold: agent.similarity_threshold ?? 0.5,
           hybridSearchAlpha: agent.hybrid_search_alpha ?? 0.75,
+          contextAwareRetrieval: agent.context_aware_retrieval ?? true,
         }) as AgentUIState
     );
   },
@@ -201,6 +205,7 @@ export const agentsClient = {
         top_k: agent.topK,
         similarity_threshold: agent.similarityThreshold,
         hybrid_search_alpha: agent.hybridSearchAlpha,
+        context_aware_retrieval: agent.contextAwareRetrieval,
       } as DatabaseAgent;
     });
   },
