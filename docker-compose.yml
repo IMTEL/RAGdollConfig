@@ -9,7 +9,7 @@ services:
     environment:
       - NODE_ENV=production
     env_file:
-      - .env.local
+      - .env
     restart: unless-stopped
     networks:
       - ragdoll_default
