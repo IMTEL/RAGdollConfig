@@ -2,16 +2,17 @@ import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
 
 const APP_BASE_PATH = "/app";
-const isAuthRoute = (pathname: string) =>
+const isPublicRoute = (pathname: string) =>
   pathname.startsWith(`${APP_BASE_PATH}/api/auth`) ||
-  pathname === `${APP_BASE_PATH}/login`;
+  pathname === `${APP_BASE_PATH}/login` ||
+  pathname.startsWith(`${APP_BASE_PATH}/_next`) ||
+  pathname === `${APP_BASE_PATH}/favicon.ico`;
 
 export default withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl;
 
-    // Allow auth endpoints and the login page through without forcing a session.
-    if (isAuthRoute(pathname)) {
+    if (isPublicRoute(pathname)) {
       return NextResponse.next();
     }
 
@@ -22,7 +23,7 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
-        if (isAuthRoute(pathname)) return true;
+        if (isPublicRoute(pathname)) return true;
         return !!token;
       },
     },
@@ -30,5 +31,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: [`${APP_BASE_PATH}/:path*`],
+  matcher: ["/app/:path*"],
 };
