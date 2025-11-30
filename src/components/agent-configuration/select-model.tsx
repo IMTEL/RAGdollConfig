@@ -26,9 +26,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LLM } from "@/app/(main)/agents/agent_data";
 import axios from "axios";
 
-const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
-const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
-
 interface SelectAgentProps {
   selectedModel?: LLM | null;
   onChange?: (model: LLM | null) => void;
@@ -83,7 +80,7 @@ export function SelectModel({
       setIsLoadingModels(true);
       setFetchError(null);
       try {
-        const response = await axios.post(appApi("/api/get-models"), {
+        const response = await axios.post("/api/get-models", {
           provider: normalizedProvider,
           apiKey,
         });

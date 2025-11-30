@@ -18,9 +18,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
-const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
-
 interface DeleteAgentProps {
   agent: AgentUIState;
   onSuccess: () => void;
@@ -32,7 +29,7 @@ export function DeleteAgent({ agent, onSuccess }: DeleteAgentProps) {
   const router = useRouter();
 
   const deleteAgent = async () => {
-    const response = await axios.get(appApi("/api/delete-agent"), {
+    const response = await axios.get("/api/delete-agent", {
       params: { agentId: agent.id },
     });
 

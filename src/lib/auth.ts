@@ -2,23 +2,20 @@
 import axios from "axios";
 import { signIn, signOut } from "next-auth/react";
 
-const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
-const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
-
 export const testUserSignIn = () => {
   signIn("dev", {
     redirect: true,
-    callbackUrl: APP_BASE_PATH,
+    callbackUrl: "/",
   });
 };
 
 export const googleSignIn = () =>
   signIn("google", {
-    callbackUrl: APP_BASE_PATH,
+    callbackUrl: "/",
   });
 
 export const handleSignOut = async () => {
-  const response = await axios.get(appApi("/api/logout"));
+  const response = await axios.get("/api/logout");
 
   if (response.status !== 200) {
     alert(
@@ -26,5 +23,5 @@ export const handleSignOut = async () => {
         response.status.toString
     );
   }
-  signOut({ callbackUrl: `${APP_BASE_PATH}/login` });
+  signOut({ callbackUrl: "/login" });
 };

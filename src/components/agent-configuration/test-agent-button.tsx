@@ -9,8 +9,6 @@ import { AccessKey } from "./access-key-card";
 
 const CHAT_WEBSITE_URL =
   process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
-const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
-const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
 
 interface TestAgentProps {
   agent: AgentUIState;
@@ -44,12 +42,9 @@ export function TestAgent({
   const getAccessKeys = async () => {
     const params = new URLSearchParams({ agent_id: agent.id });
 
-    const response = await axios.get(
-      appApi("/api/fetch-access-keys"),
-      {
-        params: { agentId: agent.id },
-      }
-    );
+    const response = await axios.get("/api/fetch-access-keys", {
+      params: { agentId: agent.id },
+    });
 
     if (response.status !== 200) {
       console.error(
@@ -61,16 +56,13 @@ export function TestAgent({
   };
 
   const createNewAccessKey = async (): Promise<AccessKey> => {
-    const response = await axios.get(
-      appApi("/api/new-access-key"),
-      {
-        params: {
-          accessKeyName: "Test-Access-Key",
-          expiryDate: getExpiryTime().toISOString(),
-          agentId: agent.id,
-        },
-      }
-    );
+    const response = await axios.get("/api/new-access-key", {
+      params: {
+        accessKeyName: "Test-Access-Key",
+        expiryDate: getExpiryTime().toISOString(),
+        agentId: agent.id,
+      },
+    });
 
     if (response.status !== 200) {
       console.error("Failed to create access key:", response.statusText);
@@ -87,12 +79,9 @@ export function TestAgent({
       console.warn("Stored accesskey did not have an id");
       return;
     }
-    const response = await axios.get(
-      appApi("/api/revoke-access-key"),
-      {
-        params: { agentId: agent.id, accessKeyId: accessKeyId },
-      }
-    );
+    const response = await axios.get("/api/revoke-access-key", {
+      params: { agentId: agent.id, accessKeyId: accessKeyId },
+    });
     if (response.status !== 200) {
       console.warn(
         "Did not manage to delete old test access-key, is it deleted already?"

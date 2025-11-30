@@ -30,9 +30,6 @@ import { SelectModel } from "./select-model";
 
 type ApiKeyUsage = "llm" | "embedding" | "both";
 
-const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
-const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
-
 interface StoredApiKey {
   id: string;
   label: string;
@@ -93,7 +90,7 @@ export function AgentModal({
       setApiKeysLoading(true);
       setApiKeysError(null);
       try {
-        const response = await fetch(appApi("/api/get-api-keys"));
+        const response = await fetch("/api/get-api-keys");
         if (!response.ok) {
           throw new Error(`Failed to fetch API keys (${response.status})`);
         }
@@ -163,7 +160,7 @@ export function AgentModal({
       }
 
       try {
-        const response = await fetch(appApi(`/api/get-api-keys/${keyId}`));
+        const response = await fetch(`/api/get-api-keys/${keyId}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch API key (${response.status})`);
         }

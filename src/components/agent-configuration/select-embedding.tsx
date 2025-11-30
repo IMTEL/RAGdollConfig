@@ -15,9 +15,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
-const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
-
 interface SelectEmbeddingProps {
   selectedEmbedding?: string | null;
   onChange?: (embedding: string | null) => void;
@@ -53,7 +50,7 @@ export function SelectEmbedding({
   } = useQuery({
     queryKey: ["embeddingModels", normalizedProvider, apiKey],
     queryFn: async (): Promise<string[]> => {
-      const response = await axios.post(appApi("/api/get-embedding-models"), {
+      const response = await axios.post("/api/get-embedding-models", {
         provider: normalizedProvider,
         apiKey,
       });
