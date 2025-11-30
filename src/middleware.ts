@@ -1,4 +1,3 @@
-import { QueryKey, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { withAuth } from "next-auth/middleware";
 
 export default withAuth({
