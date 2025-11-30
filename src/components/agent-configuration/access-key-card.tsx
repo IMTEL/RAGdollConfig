@@ -26,7 +26,7 @@ export function AccessKeyCard({
   onRevoke,
   agentId,
 }: AccessKeyCardProps) {
-  const [displayAccessKey, setDisplayAccessKey] = useState<boolean>(false);
+  const [displayAccessKey, setDisplayAccessKey] = useState<Boolean>(false);
 
   const getStatus = () => {
     if (!accessKey.expiry_date) return true;

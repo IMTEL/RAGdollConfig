@@ -1,4 +1,3 @@
-import { authConfig } from "@/auth.config";
 import axios from "axios";
 import NextAuth, { AuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -15,7 +14,6 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions = {
-  ...authConfig,
   session: { strategy: "jwt" },
   providers: [
     GoogleProvider({

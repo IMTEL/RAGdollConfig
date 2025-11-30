@@ -6,9 +6,10 @@ import { useSession } from "next-auth/react";
 import { FcGoogle } from "react-icons/fc";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { useEffect } from "react";
 
-function LoginForm() {
+export default function LoginPage() {
+  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
 
@@ -22,44 +23,30 @@ function LoginForm() {
   }, [error]);
 
   return (
-    <div className="w-80 rounded-2xl bg-white p-8 shadow-lg">
-      <h1 className="mb-6 text-center text-2xl font-semibold text-gray-800">
-        Sign in
-      </h1>
-      <div className="flex flex-col items-center space-y-3">
-        <Button
-          onClick={googleSignIn}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-3 text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50"
-        >
-          <FcGoogle className="text-xl" />
-          <span className="font-medium">Sign in with Google</span>
-        </Button>
-        {process.env.NODE_ENV === "development" && (
+    <main className="flex min-h-screen items-center justify-center bg-gray-100">
+      <div className="w-80 rounded-2xl bg-white p-8 shadow-lg">
+        <h1 className="mb-6 text-center text-2xl font-semibold text-gray-800">
+          Sign in
+        </h1>
+        <div className="flex flex-col items-center space-y-3">
           <Button
-            onClick={testUserSignIn}
+            onClick={googleSignIn}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-3 text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50"
           >
-            <User className="text-xl" />
-            <span className="font-medium">Test Account</span>
+            <FcGoogle className="text-xl" />
+            <span className="font-medium">Sign in with Google</span>
           </Button>
-        )}
+          {process.env.NODE_ENV === "development" && (
+            <Button
+              onClick={testUserSignIn}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-3 text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50"
+            >
+              <User className="text-xl" />
+              <span className="font-medium">Test Account</span>
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
-
-export default function LoginPage() {
-  const { data: session } = useSession();
-
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-100">
-      <Suspense
-        fallback={
-          <div className="h-64 w-80 animate-pulse rounded-2xl bg-white p-8 shadow-lg" />
-        }
-      >
-        <LoginForm />
-      </Suspense>
     </main>
   );
 }
