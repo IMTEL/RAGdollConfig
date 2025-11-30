@@ -82,6 +82,8 @@ export interface LLM {
 }
 
 const backend_api_url = process.env.BACKEND_API_URL || "http://localhost:8000";
+const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
+const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
 
 interface DatabaseAgent {
   id: string; // optional for creation
@@ -118,7 +120,7 @@ interface DatabaseRole {
 
 export const agentsClient = {
   async getAll(): Promise<DatabaseAgent[]> {
-    const res = await fetch("/api/fetch-agents");
+    const res = await fetch(appApi("/api/fetch-agents"));
     if (!res.ok) throw new Error("Failed to fetch agents");
     return res.json();
   },
@@ -238,7 +240,7 @@ export const agentsClient = {
   },
 
   async updateAgent(agent: AgentUIState): Promise<AgentUIState> {
-    const response = await fetch(`/api/set-agent`, {
+    const response = await fetch(appApi(`/api/set-agent`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -252,12 +254,15 @@ export const agentsClient = {
   },
   // Get an agent by ID
   async getAgentById(agentId: string): Promise<AgentUIState> {
-    const response = await fetch(`api/fetch-agent?agent_id=${agentId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = await fetch(
+      appApi(`/api/fetch-agent?agent_id=${agentId}`),
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch agent: ${response.status}`);
     }
@@ -266,7 +271,7 @@ export const agentsClient = {
 
   // Get all documents for an agent
   async getDocumentsForAgent(agentId: string): Promise<DocumentMetadata[]> {
-    const response = await axios.get("/api/fetch-documents", {
+    const response = await axios.get(appApi("/api/fetch-documents"), {
       params: { agentId: agentId },
       headers: {
         Accept: "application/json",
@@ -297,7 +302,7 @@ export const agentsClient = {
 
   // Delete a document
   async deleteDocument(documentId: string, agentId: string): Promise<void> {
-    const response = await axios.get("/api/delete-document", {
+    const response = await axios.get(appApi("/api/delete-document"), {
       params: { agentId: agentId, documentId: documentId },
     });
     if (response.status !== 200) {

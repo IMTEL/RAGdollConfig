@@ -24,6 +24,8 @@ import axios from "axios";
 
 const RAGDOLL_BASE_URL =
   process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
+const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
+const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
 
 export function AccessKeyModal({
   open,
@@ -59,7 +61,7 @@ export function AccessKeyModal({
 
     console.log(params);
 
-    const response = await axios.get("/api/new-access-key", {
+    const response = await axios.get(appApi("/api/new-access-key"), {
       params: {
         accessKeyName: name,
         expiryDate: expiry_date,

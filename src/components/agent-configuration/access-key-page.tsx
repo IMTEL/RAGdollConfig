@@ -9,6 +9,8 @@ import axios from "axios";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
+const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
 
 export interface AccessKeyPageProps {
   agentId: string;
@@ -23,7 +25,7 @@ export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
     const getAccessKeys = async () => {
       const params = new URLSearchParams({ agent_id: agentId });
 
-      const response = await axios.get("/api/fetch-access-keys", {
+      const response = await axios.get(appApi("/api/fetch-access-keys"), {
         params: { agentId: agentId },
       });
 

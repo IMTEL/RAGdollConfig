@@ -5,6 +5,8 @@ import { Copy, Eye, Key } from "lucide-react";
 import { useState } from "react";
 const RAGDOLL_BASE_URL =
   process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
+const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
+const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
 
 export interface AccessKey {
   id: string | null;
@@ -39,7 +41,7 @@ export function AccessKeyCard({
       return;
     }
 
-    const response = await axios.get("/api/revoke-access-key", {
+    const response = await axios.get(appApi("/api/revoke-access-key"), {
       params: { agentId: agentId, accessKeyId: accessKey.id },
     });
 

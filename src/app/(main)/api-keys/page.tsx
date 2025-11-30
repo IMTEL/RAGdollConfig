@@ -55,6 +55,9 @@ const usageOptions = [
   { value: "both", label: "LLM and embedding" },
 ];
 
+const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
+const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
+
 export default function ApiKeysPage() {
   const [keyLabel, setKeyLabel] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -85,7 +88,7 @@ export default function ApiKeysPage() {
     async function fetchProviders() {
       try {
         setProviderError(null);
-        const response = await fetch("/api/get-providers");
+        const response = await fetch(appApi("/api/get-providers"));
         if (!response.ok) {
           throw new Error(`Failed to fetch providers (${response.status})`);
         }
@@ -121,7 +124,7 @@ export default function ApiKeysPage() {
 
     try {
       setKeysError(null);
-      const response = await fetch("/api/get-api-keys");
+      const response = await fetch(appApi("/api/get-api-keys"));
       if (!response.ok) {
         throw new Error(`Failed to fetch API keys (${response.status})`);
       }
@@ -252,7 +255,7 @@ export default function ApiKeysPage() {
     setFormError(null);
 
     try {
-      const response = await fetch("/api/get-api-keys", {
+      const response = await fetch(appApi("/api/get-api-keys"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

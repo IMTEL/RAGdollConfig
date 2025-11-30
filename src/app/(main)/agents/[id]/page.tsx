@@ -59,6 +59,8 @@ const CHAT_WEBSITE_URL =
   process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
 const RAGDOLL_BASE_URL =
   process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
+const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/app";
+const appApi = (path: string) => `${APP_BASE_PATH}${path}`;
 
 export default function AgentConfigurationPage({
   params,
@@ -155,9 +157,12 @@ export default function AgentConfigurationPage({
 
       while (true) {
         try {
-          const statusResponse = await axios.get("/api/upload-status", {
-            params: { taskId },
-          });
+          const statusResponse = await axios.get(
+            appApi("/api/upload-status"),
+            {
+              params: { taskId },
+            }
+          );
 
           if (statusResponse.status === 200) {
             const statusData = statusResponse.data;
@@ -284,10 +289,14 @@ export default function AgentConfigurationPage({
         formData.append("categories", "General Information"); // TODO: Replace with actual categories
 
         try {
-          const response = await axios.post(`/api/upload-document`, formData, {
-            params: { agentId: agent.id },
-            validateStatus: () => true, // Don't throw on any status code
-          });
+          const response = await axios.post(
+            appApi(`/api/upload-document`),
+            formData,
+            {
+              params: { agentId: agent.id },
+              validateStatus: () => true, // Don't throw on any status code
+            }
+          );
 
           if (response.status !== 200) {
             const errorData = response.data || { detail: response.statusText };
