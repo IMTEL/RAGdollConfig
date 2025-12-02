@@ -2,7 +2,7 @@ import axios from "axios";
 import NextAuth, { AuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { use } from "react";
+import { authConfig } from "@/auth.config";
 
 declare module "next-auth/jwt" {
   interface JWT {
@@ -14,6 +14,8 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions = {
+  ...authConfig,
+  secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
   providers: [
     GoogleProvider({
@@ -24,8 +26,8 @@ export const authOptions = {
       id: "dev",
       credentials: {},
       async authorize(_, req) {
-        if (process.env.NODE_ENV !== "development")
-          throw new Error("Can only be used in dev environment");
+        if (process.env.NEXT_PUBLIC_ENABLE_TEST_USER !== "true")
+          throw new Error("Test user is disabled");
         return {
           id: "1",
           name: "Dev user",

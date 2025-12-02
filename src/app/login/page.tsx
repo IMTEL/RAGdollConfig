@@ -34,7 +34,7 @@ function LoginForm() {
           <FcGoogle className="text-xl" />
           <span className="font-medium">Sign in with Google</span>
         </Button>
-        {process.env.NODE_ENV === "development" && (
+        {process.env.NEXT_PUBLIC_ENABLE_TEST_USER === "true" && (
           <Button
             onClick={testUserSignIn}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-3 text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50"

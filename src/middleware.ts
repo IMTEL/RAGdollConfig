@@ -1,13 +1,19 @@
-import { QueryKey, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { withAuth } from "next-auth/middleware";
 
 export default withAuth({
-  pages: { signIn: "/login" },
+  pages: { 
+    signIn: "/login",
+  },
   callbacks: {
     authorized: ({ token }) => !!token,
   },
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|api/auth|login).*)"],
+  // Only protect routes that actually need authentication
+  // With basePath="/app", paths in middleware don't include /app prefix
+  // Exclude: login page, api/auth (NextAuth), and static files
+  matcher: [
+    "/((?!login|api/auth|_next/static|_next/image|favicon\\.ico).*)",
+  ],
 };

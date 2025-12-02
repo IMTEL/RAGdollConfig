@@ -85,7 +85,7 @@ export default function ApiKeysPage() {
     async function fetchProviders() {
       try {
         setProviderError(null);
-        const response = await fetch("/api/get-providers");
+        const response = await fetch("/api/providers");
         if (!response.ok) {
           throw new Error(`Failed to fetch providers (${response.status})`);
         }
