@@ -80,7 +80,7 @@ async function handleLogin(token: any, account: any, user: any): Promise<any> {
   const provider = account.provider;
   const bearer_token = getProviderToken(provider, account);
   const response = await axios.post(
-    process.env.BACKEND_API_URL + "/api/login",
+    process.env.BACKEND_API_URL + "/login",
     {
       token: bearer_token,
       provider: provider,
