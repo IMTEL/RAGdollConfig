@@ -118,7 +118,7 @@ interface DatabaseRole {
 
 export const agentsClient = {
   async getAll(): Promise<DatabaseAgent[]> {
-    const res = await fetch("/api/fetch-agents");
+    const res = await fetch("/api/agents/");
     if (!res.ok) throw new Error("Failed to fetch agents");
     return res.json();
   },

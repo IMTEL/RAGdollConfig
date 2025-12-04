@@ -129,6 +129,11 @@ export default function ApiKeysPage() {
       if (!isMountedRef.current) {
         return;
       }
+      if (data.length === 0) {
+        setApiKeys([]);
+        throw new Error("API keys list is empty");
+        
+      }
       setApiKeys(
         data.map((item) => ({
           id: item.id,
