@@ -121,7 +121,7 @@ export default function ApiKeysPage() {
 
     try {
       setKeysError(null);
-      const response = await fetch("/api/get-api-keys");
+      const response = await fetch("/api/api-keys");
       if (!response.ok) {
         throw new Error(`Failed to fetch API keys (${response.status})`);
       }
@@ -252,7 +252,7 @@ export default function ApiKeysPage() {
     setFormError(null);
 
     try {
-      const response = await fetch("/api/get-api-keys", {
+      const response = await fetch("/api/api-keys", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
