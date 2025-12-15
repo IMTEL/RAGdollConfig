@@ -10,10 +10,5 @@ export default withAuth({
 });
 
 export const config = {
-  // Only protect routes that actually need authentication
-  // With basePath="/app", paths in middleware don't include /app prefix
-  // Exclude: login page, api/auth (NextAuth), and static files
-  matcher: [
-    // "/((?!login|api/auth|_next/static|_next/image|favicon\\.ico).*)",
-  ],
+  matcher: ["/", "/((?!_next/static|_next/image|favicon\\.ico|api/auth|login).+)"],
 };
