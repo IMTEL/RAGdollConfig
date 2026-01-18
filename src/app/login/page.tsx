@@ -6,9 +6,9 @@ import { useSession } from "next-auth/react";
 import { FcGoogle } from "react-icons/fc";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 
-export default function LoginPage() {
+function LoginContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
@@ -48,5 +48,13 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-gray-100">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
