@@ -9,6 +9,7 @@ import { AccessKey } from "./access-key-card";
 
 const CHAT_WEBSITE_URL =
   process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
+const backend_api_url = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 
 interface TestAgentProps {
   agent: AgentUIState;
@@ -42,8 +43,8 @@ export function TestAgent({
   const getAccessKeys = async () => {
     const params = new URLSearchParams({ agent_id: agent.id });
 
-    const response = await axios.get("/api/fetch-access-keys", {
-      params: { agentId: agent.id },
+    const response = await axios.get(`${backend_api_url}/get-accesskeys`, {
+      params: { agent_id: agent.id },
     });
 
     if (response.status !== 200) {
@@ -56,11 +57,11 @@ export function TestAgent({
   };
 
   const createNewAccessKey = async (): Promise<AccessKey> => {
-    const response = await axios.get("/api/new-access-key", {
+    const response = await axios.get(`${backend_api_url}/new-accesskey`, {
       params: {
-        accessKeyName: "Test-Access-Key",
-        expiryDate: getExpiryTime().toISOString(),
-        agentId: agent.id,
+        name: "Test-Access-Key",
+        expiry_date: getExpiryTime().toISOString(),
+        agent_id: agent.id,
       },
     });
 
@@ -79,8 +80,8 @@ export function TestAgent({
       console.warn("Stored accesskey did not have an id");
       return;
     }
-    const response = await axios.get("/api/revoke-access-key", {
-      params: { agentId: agent.id, accessKeyId: accessKeyId },
+    const response = await axios.get(`${backend_api_url}/revoke-accesskey`, {
+      params: { agent_id: agent.id, access_key_id: accessKeyId },
     });
     if (response.status !== 200) {
       console.warn(

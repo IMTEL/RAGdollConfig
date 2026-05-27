@@ -53,6 +53,8 @@ import { TestAgent } from "@/components/agent-configuration/test-agent-button";
 import { AgentUIState, agentsClient, DocumentMetadata } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
+
+const backend_api_url = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 import { DeleteAgent } from "@/components/agent-configuration/delete-agent-button";
 
 const CHAT_WEBSITE_URL =
@@ -155,9 +157,7 @@ export default function AgentConfigurationPage({
 
       while (true) {
         try {
-          const statusResponse = await axios.get("/api/upload-status", {
-            params: { taskId },
-          });
+          const statusResponse = await axios.get(`${backend_api_url}/upload/status/${taskId}`);
 
           if (statusResponse.status === 200) {
             const statusData = statusResponse.data;
@@ -284,8 +284,8 @@ export default function AgentConfigurationPage({
         formData.append("categories", "General Information"); // TODO: Replace with actual categories
 
         try {
-          const response = await axios.post(`/api/upload-document`, formData, {
-            params: { agentId: agent.id },
+          const response = await axios.post(`${backend_api_url}/upload/agent`, formData, {
+            params: { agent_id: agent.id },
             validateStatus: () => true, // Don't throw on any status code
           });
 

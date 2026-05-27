@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const backend_api_url = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
+
 interface DeleteAgentProps {
   agent: AgentUIState;
   onSuccess: () => void;
@@ -29,9 +31,7 @@ export function DeleteAgent({ agent, onSuccess }: DeleteAgentProps) {
   const router = useRouter();
 
   const deleteAgent = async () => {
-    const response = await axios.get("/api/delete-agent", {
-      params: { agentId: agent.id },
-    });
+    const response = await axios.delete(`${backend_api_url}/agents/${agent.id}`);
 
     if (response.status !== 200) {
       console.error("Could not delete agent: " + response.status.toString());

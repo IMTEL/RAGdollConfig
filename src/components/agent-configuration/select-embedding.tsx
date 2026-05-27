@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+const backend_api_url = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
+
 interface SelectEmbeddingProps {
   selectedEmbedding?: string | null;
   onChange?: (embedding: string | null) => void;
@@ -50,9 +52,9 @@ export function SelectEmbedding({
   } = useQuery({
     queryKey: ["embeddingModels", normalizedProvider, apiKey],
     queryFn: async (): Promise<string[]> => {
-      const response = await axios.post("/api/get-embedding-models", {
+      const response = await axios.post(`${backend_api_url}/get_embedding_models`, {
         provider: normalizedProvider,
-        apiKey,
+        api_key: apiKey,
       });
 
       const data = response.data;
