@@ -90,11 +90,16 @@ export function AgentModal({
       setApiKeysLoading(true);
       setApiKeysError(null);
       try {
-        const response = await fetch("/api/api-keys");
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api-keys`);
         if (!response.ok) {
           throw new Error(`Failed to fetch API keys (${response.status})`);
         }
-        const data: StoredApiKey[] = await response.json();
+        const text = await response.text();
+        if (!text) {
+          setApiKeys([]);
+          return;
+        }
+        const data: StoredApiKey[] = JSON.parse(text);
         if (!cancelled) {
           setApiKeys(data);
         }
@@ -160,11 +165,15 @@ export function AgentModal({
       }
 
       try {
-        const response = await fetch(`/api/api-keys/${keyId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api-keys/${keyId}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch API key (${response.status})`);
         }
-        const data = await response.json();
+        const text = await response.text();
+        if (!text) {
+          throw new Error('Empty response from server');
+        }
+        const data = JSON.parse(text);
         const rawKey = data?.raw_key as string | undefined;
         if (!rawKey) {
           throw new Error("API key secret missing in response");
