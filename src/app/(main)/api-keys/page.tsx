@@ -167,6 +167,30 @@ export default function ApiKeysPage() {
     }
   }, []);
 
+  const deleteApiKey = useCallback(async (keyId: string, keyLabel: string) => {
+    if (!confirm(`Are you sure you want to delete the API key "${keyLabel}"?`)) {
+      return;
+    }
+
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+      const response = await fetch(`${backendUrl}/api-keys/${keyId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete API key (${response.status})`);
+      }
+
+      // Reload the API keys list
+      await loadApiKeys(false);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete API key";
+      alert(`Error: ${errorMessage}`);
+    }
+  }, [loadApiKeys]);
+
   useEffect(() => {
     loadApiKeys(true);
   }, [loadApiKeys]);
@@ -373,7 +397,7 @@ export default function ApiKeysPage() {
               size="icon"
               className="bg-transparent transition-colors hover:bg-red-500 hover:text-white"
               aria-label={`Delete key ${item.label}`}
-              onClick={() => alert("Not implemented")}
+              onClick={() => deleteApiKey(item.id, item.label)}
             >
               <Trash2 className="size-4" />
             </Button>
