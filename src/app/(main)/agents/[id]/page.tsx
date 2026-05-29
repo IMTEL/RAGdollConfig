@@ -46,6 +46,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { UploadProgressDialog } from "@/components/ui/upload-progress-dialog";
 import axios from "axios";
 import { SelectModel } from "@/components/agent-configuration/select-model";
 import { RoleEditor } from "@/components/agent-configuration/role-editor";
@@ -110,6 +111,13 @@ export default function AgentConfigurationPage({
   };
 
   const [dragActive, setDragActive] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Map<string, {
+    fileName: string;
+    status: 'queued' | 'processing' | 'complete' | 'error' | 'failed';
+    progressPercent: number;
+    message: string;
+    fakeProgress: number;
+  }>>(new Map());
   const [embeddingError, setEmbeddingError] = useState<{
     show: boolean;
     title: string;
@@ -155,6 +163,10 @@ export default function AgentConfigurationPage({
         return;
       }
 
+      let lastRealProgress = 0;
+      let lastUpdateTime = Date.now();
+      let fakeProgress = 10; // Start fake progress at 10%
+
       while (true) {
         try {
           const statusResponse = await axios.get(`${backend_api_url}/upload/status/${taskId}`);
@@ -162,6 +174,38 @@ export default function AgentConfigurationPage({
           if (statusResponse.status === 200) {
             const statusData = statusResponse.data;
             const taskStatus: string | undefined = statusData.status;
+            const realProgress = statusData.progress_percent || 0;
+
+            // Update fake progress only if real progress is advancing
+            if (realProgress > lastRealProgress) {
+              fakeProgress = realProgress;
+              lastRealProgress = realProgress;
+              lastUpdateTime = Date.now();
+            } else if (taskStatus === 'processing') {
+              // If real progress is stuck but still processing, advance fake progress
+              const timeSinceLastUpdate = Date.now() - lastUpdateTime;
+              if (timeSinceLastUpdate > 1000) {
+                // Advance fake progress by 1-3% every second when stuck
+                fakeProgress = Math.min(fakeProgress + Math.random() * 2 + 1, 95);
+                lastUpdateTime = Date.now();
+              }
+            }
+
+            // Use real progress if available, otherwise use fake progress
+            const displayProgress = realProgress > 0 ? realProgress : fakeProgress;
+
+            // Update progress for this specific upload (by tempId)
+            setUploadProgress((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(tempId, {
+                fileName,
+                status: taskStatus as any || 'processing',
+                progressPercent: displayProgress,
+                fakeProgress,
+                message: statusData.message || '',
+              });
+              return newMap;
+            });
 
             const isCompleteStatus =
               taskStatus === "complete" ||
@@ -183,6 +227,28 @@ export default function AgentConfigurationPage({
                 await wait(2000);
                 continue;
               }
+
+              // Keep showing 100% for a moment before removing
+              setUploadProgress((prev) => {
+                const newMap = new Map(prev);
+                newMap.set(tempId, {
+                  fileName,
+                  status: 'complete',
+                  progressPercent: 100,
+                  fakeProgress: 100,
+                  message: statusData.message || '',
+                });
+                return newMap;
+              });
+
+              // Remove from progress tracking after a short delay
+              setTimeout(() => {
+                setUploadProgress((prev) => {
+                  const newMap = new Map(prev);
+                  newMap.delete(tempId);
+                  return newMap;
+                });
+              }, 1500);
 
               setDocuments(agentId, (prev) => {
                 const readyDocsById = new Set(
@@ -238,6 +304,15 @@ export default function AgentConfigurationPage({
                   "Document processing failed. Please try again.",
                 fileName,
               });
+
+              // Keep showing error for a moment before removing
+              setTimeout(() => {
+                setUploadProgress((prev) => {
+                  const newMap = new Map(prev);
+                  newMap.delete(tempId);
+                  return newMap;
+                });
+              }, 1500);
 
               return;
             }
@@ -844,58 +919,92 @@ export default function AgentConfigurationPage({
                         <div>Upload Date</div>
                         <div>Status</div>
                       </div>
-                      {agent.documents.map((document, index) => (
-                        <div
-                          key={document.id || `document-${index}`}
-                          className="grid grid-cols-5 items-center gap-4 border-b p-3 last:border-b-0"
-                        >
-                          <div className="flex items-center gap-2">
-                            <FileText className="text-muted-foreground h-4 w-4" />
-                            <span
-                              className="truncate text-sm"
-                              title={document.name}
-                            >
-                              {document.name}
-                            </span>
+                      {agent.documents.map((document, index) => {
+                        const progress = uploadProgress.get(document.id || `document-${index}`);
+                        const isProcessing = progress && progress.status === 'processing';
+                        const hasError = progress && (progress.status === 'error' || progress.status === 'failed');
+
+                        return (
+                          <div
+                            key={document.id || `document-${index}`}
+                            className="space-y-2 border-b p-3 last:border-b-0"
+                          >
+                            <div className="grid grid-cols-5 items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <FileText className="text-muted-foreground h-4 w-4" />
+                                <span
+                                  className="truncate text-sm"
+                                  title={document.name}
+                                >
+                                  {document.name}
+                                </span>
+                              </div>
+                              <div>
+                                <Badge variant="outline" className="text-xs">
+                                  {document.type}
+                                </Badge>
+                              </div>
+                              <div className="text-muted-foreground text-sm">
+                                {document.size}
+                              </div>
+                              <div className="text-muted-foreground flex items-center gap-1 text-sm">
+                                <Calendar className="h-3 w-3" />
+                                {document.uploadDate}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Badge
+                                  variant={
+                                    document.status === "ready"
+                                      ? "default"
+                                      : document.status === "processing" || isProcessing
+                                        ? "secondary"
+                                        : "destructive"
+                                  }
+                                  className="text-xs"
+                                >
+                                  {isProcessing ? "processing" : document.status}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    document.id && handleDocumentDelete(document.id)
+                                  }
+                                  className="text-muted-foreground hover:text-destructive h-6 w-6 p-0"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Inline Progress Bar */}
+                            {(isProcessing || hasError) && progress && (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">
+                                    {progress.message}
+                                  </span>
+                                  <span className="font-medium">
+                                    {progress.progressPercent}%
+                                  </span>
+                                </div>
+                                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                                  <div
+                                    className={`h-full transition-all duration-300 ${
+                                      hasError
+                                        ? "bg-red-500"
+                                        : "bg-blue-500"
+                                    }`}
+                                    style={{
+                                      width: `${progress.progressPercent}%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <Badge variant="outline" className="text-xs">
-                              {document.type}
-                            </Badge>
-                          </div>
-                          <div className="text-muted-foreground text-sm">
-                            {document.size}
-                          </div>
-                          <div className="text-muted-foreground flex items-center gap-1 text-sm">
-                            <Calendar className="h-3 w-3" />
-                            {document.uploadDate}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Badge
-                              variant={
-                                document.status === "ready"
-                                  ? "default"
-                                  : document.status === "processing"
-                                    ? "secondary"
-                                    : "destructive"
-                              }
-                              className="text-xs"
-                            >
-                              {document.status}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                document.id && handleDocumentDelete(document.id)
-                              }
-                              className="text-muted-foreground hover:text-destructive h-6 w-6 p-0"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
