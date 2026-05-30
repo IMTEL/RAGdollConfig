@@ -55,13 +55,14 @@ import { AgentUIState, agentsClient, DocumentMetadata } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
 
-const backend_api_url = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 import { DeleteAgent } from "@/components/agent-configuration/delete-agent-button";
 
 const CHAT_WEBSITE_URL =
   process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
 const RAGDOLL_BASE_URL =
   process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
+
+type UploadStatus = "queued" | "processing" | "complete" | "error" | "failed";
 
 export default function AgentConfigurationPage({
   params,
@@ -113,7 +114,7 @@ export default function AgentConfigurationPage({
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Map<string, {
     fileName: string;
-    status: 'queued' | 'processing' | 'complete' | 'error' | 'failed';
+    status: UploadStatus;
     progressPercent: number;
     message: string;
     fakeProgress: number;
@@ -169,11 +170,21 @@ export default function AgentConfigurationPage({
 
       while (true) {
         try {
-          const statusResponse = await axios.get(`${backend_api_url}/upload/status/${taskId}`);
+          const statusResponse = await axios.get("/api/upload-status", {
+            params: { taskId },
+          });
 
           if (statusResponse.status === 200) {
             const statusData = statusResponse.data;
-            const taskStatus: string | undefined = statusData.status;
+            const rawTaskStatus: string | undefined = statusData.status;
+            const taskStatus: UploadStatus =
+              statusData.status === "queued" ||
+              statusData.status === "processing" ||
+              statusData.status === "complete" ||
+              statusData.status === "error" ||
+              statusData.status === "failed"
+                ? statusData.status
+                : "processing";
             const realProgress = statusData.progress_percent || 0;
 
             // Update fake progress only if real progress is advancing
@@ -199,7 +210,7 @@ export default function AgentConfigurationPage({
               const newMap = new Map(prev);
               newMap.set(tempId, {
                 fileName,
-                status: taskStatus as any || 'processing',
+                status: taskStatus,
                 progressPercent: displayProgress,
                 fakeProgress,
                 message: statusData.message || '',
@@ -208,9 +219,9 @@ export default function AgentConfigurationPage({
             });
 
             const isCompleteStatus =
-              taskStatus === "complete" ||
-              taskStatus === "ready" ||
-              taskStatus === "processing_complete";
+              rawTaskStatus === "complete" ||
+              rawTaskStatus === "ready" ||
+              rawTaskStatus === "processing_complete";
 
             if (isCompleteStatus) {
               const backendDocuments: DocumentMetadata[] =
@@ -289,7 +300,7 @@ export default function AgentConfigurationPage({
               return;
             }
 
-            if (taskStatus === "failed" || taskStatus === "error") {
+            if (rawTaskStatus === "failed" || rawTaskStatus === "error") {
               setDocuments(agentId, (prev) =>
                 prev.map((doc) =>
                   doc.id === tempId ? { ...doc, status: "error" as const } : doc
@@ -359,8 +370,8 @@ export default function AgentConfigurationPage({
         formData.append("categories", "General Information"); // TODO: Replace with actual categories
 
         try {
-          const response = await axios.post(`${backend_api_url}/upload/agent`, formData, {
-            params: { agent_id: agent.id },
+          const response = await axios.post("/api/upload-document", formData, {
+            params: { agentId: agent.id },
             validateStatus: () => true, // Don't throw on any status code
           });
 

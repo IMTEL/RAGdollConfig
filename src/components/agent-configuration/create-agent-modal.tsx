@@ -90,7 +90,7 @@ export function AgentModal({
       setApiKeysLoading(true);
       setApiKeysError(null);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api-keys`);
+        const response = await fetch("/api/get-api-keys");
         if (!response.ok) {
           throw new Error(`Failed to fetch API keys (${response.status})`);
         }
@@ -165,7 +165,7 @@ export function AgentModal({
       }
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api-keys/${keyId}`);
+        const response = await fetch(`/api/get-api-keys/${keyId}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch API key (${response.status})`);
         }

@@ -38,3 +38,37 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { keyId: string } }
+) {
+  const sessionToken = await getSessionToken(req);
+  if (!sessionToken)
+    return NextResponse.json({ error: "No access token" }, { status: 401 });
+
+  const { keyId } = params;
+
+  try {
+    const upstream = await axios.delete(`${BACKEND_API_URL}/api-keys/${keyId}`, {
+      headers: {
+        Authorization: `Bearer ${sessionToken}`,
+        Accept: "application/json",
+      },
+    });
+
+    return new NextResponse(null, { status: upstream.status });
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    }
+
+    console.error(`Failed to delete API key ${keyId}:`, error);
+    return NextResponse.json(
+      { error: "Failed to delete API key" },
+      { status: 500 }
+    );
+  }
+}

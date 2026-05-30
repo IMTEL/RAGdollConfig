@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 
 export interface AccessKeyPageProps {
   agentId: string;
@@ -21,10 +20,8 @@ export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
 
   useEffect(() => {
     const getAccessKeys = async () => {
-      const params = new URLSearchParams({ agent_id: agentId });
-
-      const response = await axios.get(`${BACKEND_API_URL}/get-accesskeys`, {
-        params: { agent_id: agentId },
+      const response = await axios.get("/api/fetch-access-keys", {
+        params: { agentId },
       });
 
       if (response.status !== 200) {
@@ -37,12 +34,12 @@ export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
       try {
         const accessKey = (await response.data) as AccessKey[];
         setAccessKeys(accessKey);
-      } catch (e) {
+      } catch {
         console.error("Failed to fetch access key:", response.statusText);
       }
     };
     getAccessKeys();
-  }, []);
+  }, [agentId]);
 
   const onRevoke = (accessKey: AccessKey) => {
     const newAccessKeys: AccessKey[] = accessKeys.filter((ak: AccessKey) => {

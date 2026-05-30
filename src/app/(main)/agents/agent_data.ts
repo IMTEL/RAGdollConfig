@@ -1,6 +1,4 @@
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import axios from "axios";
-import { getServerSession } from "next-auth/next";
 
 export interface DocumentMetadata {
   id: string | null;
@@ -81,8 +79,6 @@ export interface LLM {
   description: string;
 }
 
-const backend_api_url = process.env.BACKEND_API_URL || "http://localhost:8000";
-
 interface DatabaseAgent {
   id: string; // optional for creation
   name: string;
@@ -116,9 +112,16 @@ interface DatabaseRole {
   document_access: string[];
 }
 
+interface BackendDocument {
+  id: string | null;
+  name: string;
+  size?: string | null;
+  created_at?: string | null;
+}
+
 export const agentsClient = {
   async getAll(): Promise<DatabaseAgent[]> {
-    const res = await fetch(`${backend_api_url}/agents`);
+    const res = await fetch("/api/fetch-agents");
     if (!res.ok) throw new Error("Failed to fetch agents");
     return res.json();
   },
@@ -238,7 +241,7 @@ export const agentsClient = {
   },
 
   async updateAgent(agent: AgentUIState): Promise<AgentUIState> {
-    const response = await fetch(`${backend_api_url}/update-agent/`, {
+    const response = await fetch("/api/set-agent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -252,7 +255,7 @@ export const agentsClient = {
   },
   // Get an agent by ID
   async getAgentById(agentId: string): Promise<AgentUIState> {
-    const response = await fetch(`${backend_api_url}/agents/${agentId}`, {
+    const response = await fetch(`/api/fetch-agent?agent_id=${agentId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -266,8 +269,8 @@ export const agentsClient = {
 
   // Get all documents for an agent
   async getDocumentsForAgent(agentId: string): Promise<DocumentMetadata[]> {
-    const response = await axios.get(`${backend_api_url}/documents/agent`, {
-      params: { agent_id: agentId },
+    const response = await axios.get("/api/fetch-documents", {
+      params: { agentId },
       headers: {
         Accept: "application/json",
       },
@@ -283,7 +286,7 @@ export const agentsClient = {
     const data = await response.data;
 
     // Convert backend format to DocumentMetadata format
-    return data.documents.map((doc: any) => ({
+    return data.documents.map((doc: BackendDocument) => ({
       id: doc.id,
       name: doc.name,
       type: doc.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
@@ -297,8 +300,8 @@ export const agentsClient = {
 
   // Delete a document
   async deleteDocument(documentId: string, agentId: string): Promise<void> {
-    const response = await axios.delete(`${backend_api_url}/documents/`, {
-      params: { document_id: documentId, agent_id: agentId },
+    const response = await axios.get("/api/delete-document", {
+      params: { documentId, agentId },
     });
     if (response.status !== 200) {
       if (response.status === 404) {

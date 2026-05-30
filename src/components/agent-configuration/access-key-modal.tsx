@@ -1,30 +1,14 @@
 import { cn } from "@/lib/utils";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { CalendarIcon, ChevronDownIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { ChevronDownIcon } from "lucide-react";
 
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "../ui/form";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { AccessKey } from "./access-key-card";
 import { useRef, useState } from "react";
 import { Label } from "../ui/label";
 import axios from "axios";
-
-const RAGDOLL_BASE_URL =
-  process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
-const backend_api_url = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 
 export function AccessKeyModal({
   open,
@@ -52,19 +36,11 @@ export function AccessKeyModal({
     name: string,
     expiry_date: Date | null
   ): Promise<AccessKey | null> => {
-    var params = new URLSearchParams({
-      name: name,
-      agent_id: agentId,
-    });
-    if (expiry_date) params.set("expiry_date", expiry_date.toISOString());
-
-    console.log(params);
-
-    const response = await axios.get(`${backend_api_url}/new-accesskey`, {
+    const response = await axios.get("/api/new-access-key", {
       params: {
-        name: name,
-        agent_id: agentId,
-        expiry_date: expiry_date ? expiry_date.toISOString() : undefined,
+        accessKeyName: name,
+        agentId,
+        expiryDate: expiry_date ? expiry_date.toISOString() : undefined,
       },
     });
 
@@ -78,7 +54,7 @@ export function AccessKeyModal({
     try {
       const accessKey = (await response.data) as AccessKey;
       return accessKey;
-    } catch (e) {
+    } catch {
       console.error("Failed to create access key:", response.statusText);
       alert("An error occured while trying to create an access key");
       return null;

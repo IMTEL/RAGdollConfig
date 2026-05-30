@@ -1,8 +1,9 @@
 import axios from "axios";
-import NextAuth, { AuthOptions } from "next-auth";
+import NextAuth, { Account, AuthOptions } from "next-auth";
+import { JWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { use } from "react";
+import KeycloakProvider from "next-auth/providers/keycloak";
 
 declare module "next-auth/jwt" {
   interface JWT {
@@ -20,10 +21,17 @@ export const authOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
+    KeycloakProvider({
+      clientId: process.env.KEYCLOAK_CLIENT_ID ?? "ragdoll-config",
+      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET ?? "",
+      issuer:
+        process.env.KEYCLOAK_ISSUER ??
+        "http://localhost:8080/realms/ragdoll",
+    }),
     Credentials({
       id: "dev",
       credentials: {},
-      async authorize(_, req) {
+      async authorize() {
         if (process.env.NODE_ENV !== "development")
           throw new Error("Can only be used in dev environment");
         return {
@@ -36,9 +44,9 @@ export const authOptions = {
   ],
 
   callbacks: {
-    async jwt({ token, account, user }) {
-      if (account && user) {
-        return await handleLogin(token, account, user);
+    async jwt({ token, account }) {
+      if (account) {
+        return await handleLogin(token, account);
       }
 
       if (!token.refreshToken || !token.refreshTokenExpiry)
@@ -54,6 +62,13 @@ export const authOptions = {
       }
       return token;
     },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.name = token.name ?? session.user.name;
+        session.user.image = token.image ?? session.user.image;
+      }
+      return session;
+    },
   },
 
   pages: {
@@ -62,10 +77,12 @@ export const authOptions = {
   },
 } as AuthOptions;
 
-function getProviderToken(provider: string, account: any): string | null {
+function getProviderToken(provider: string, account: Account): string | null {
   switch (provider) {
     case "google":
       return account?.id_token ?? null;
+    case "keycloak":
+      return account?.id_token ?? account?.access_token ?? null;
     case "dev":
       return "dev";
     default:
@@ -74,7 +91,16 @@ function getProviderToken(provider: string, account: any): string | null {
   }
 }
 
-async function handleLogin(token: any, account: any, user: any): Promise<any> {
+interface LoginResponse {
+  session_token: string;
+  refresh_token: string;
+  session_token_ttl: string | number;
+  refresh_token_ttl: string | number;
+  name?: string | null;
+  picture?: string | null;
+}
+
+async function handleLogin(token: JWT, account: Account): Promise<JWT> {
   const provider = account.provider;
   const bearer_token = getProviderToken(provider, account);
   const response = await axios.post(
@@ -89,11 +115,13 @@ async function handleLogin(token: any, account: any, user: any): Promise<any> {
   );
 
   if (response.status == 200 && response.data) {
-    const data: any = response.data;
+    const data = response.data as LoginResponse;
     token.sessionToken = data.session_token;
     token.refreshToken = data.refresh_token;
-    token.sessionTokenExpiry = Date.now() + parseInt(data.session_token_ttl);
-    token.refreshTokenExpiry = Date.now() + parseInt(data.refresh_token_ttl);
+    token.sessionTokenExpiry =
+      Date.now() + parseInt(String(data.session_token_ttl));
+    token.refreshTokenExpiry =
+      Date.now() + parseInt(String(data.refresh_token_ttl));
     token.name = data?.name ?? null;
     token.image = data?.picture ?? null;
   } else throw new Error("An error occured when trying to login");
@@ -101,7 +129,7 @@ async function handleLogin(token: any, account: any, user: any): Promise<any> {
   return token;
 }
 
-async function refreshToken(token: any): Promise<any> {
+async function refreshToken(token: JWT): Promise<JWT> {
   const response = await axios.post(
     `${process.env.BACKEND_API_URL}/api/refresh`,
     {},
@@ -113,9 +141,13 @@ async function refreshToken(token: any): Promise<any> {
   );
 
   if (response.status == 200 && response.data?.session_token) {
-    const data = await response.data;
+    const data = response.data as Pick<
+      LoginResponse,
+      "session_token" | "session_token_ttl"
+    >;
     token.sessionToken = data.session_token;
-    token.sessionTokenExpiry = Date.now() + parseInt(data.session_token_ttl);
+    token.sessionTokenExpiry =
+      Date.now() + parseInt(String(data.session_token_ttl));
     return token;
   }
   throw new Error(`Failed to refresh token: ${response.status}`);
