@@ -6,13 +6,13 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL!;
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { keyId: string } }
+  { params }: { params: Promise<{ keyId: string }> }
 ) {
   const sessionToken = await getSessionToken(req);
   if (!sessionToken)
     return NextResponse.json({ error: "No access token" }, { status: 401 });
 
-  const { keyId } = params;
+  const { keyId } = await params;
 
   try {
     const upstream = await axios.get(`${BACKEND_API_URL}/api-keys/${keyId}`, {
@@ -41,13 +41,13 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { keyId: string } }
+  { params }: { params: Promise<{ keyId: string }> }
 ) {
   const sessionToken = await getSessionToken(req);
   if (!sessionToken)
     return NextResponse.json({ error: "No access token" }, { status: 401 });
 
-  const { keyId } = params;
+  const { keyId } = await params;
 
   try {
     const upstream = await axios.delete(`${BACKEND_API_URL}/api-keys/${keyId}`, {

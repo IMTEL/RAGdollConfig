@@ -52,7 +52,7 @@ export function SelectEmbedding({
     queryFn: async (): Promise<string[]> => {
       const response = await axios.post("/api/get-embedding-models", {
         provider: normalizedProvider,
-        api_key: apiKey,
+        apiKey,
       });
 
       const data = response.data;
@@ -151,7 +151,7 @@ export function SelectEmbedding({
         value={getKey(selectedEmbedding) ?? ""}
         onValueChange={onSelectEmbedding}
         required={required}
-        disabled={disabled}
+        disabled={selectDisabled}
       >
         <SelectTrigger
           className={cn(

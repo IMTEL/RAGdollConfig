@@ -173,11 +173,11 @@ export const agentsClient = {
       const llmApiKey = agent.llmApiKey?.trim();
       const embeddingApiKey = agent.embeddingApiKey?.trim();
 
-      if (!llmApiKey) {
+      if (!llmApiKey && !agent.databaseId) {
         throw new Error("LLM API key is required when saving an agent");
       }
 
-      if (!embeddingApiKey) {
+      if (!embeddingApiKey && !agent.databaseId) {
         throw new Error("Embedding API key is required when saving an agent");
       }
 
@@ -195,8 +195,8 @@ export const agentsClient = {
         llm_model: agent.model?.name || "none",
         llm_temperature: agent.temperature,
         llm_max_tokens: agent.maxTokens,
-        llm_api_key: llmApiKey,
-        embedding_api_key: embeddingApiKey,
+        llm_api_key: llmApiKey ?? "",
+        embedding_api_key: embeddingApiKey ?? "",
         access_key: [],
         retrieval_method: "semantic",
         embedding_model: agent.embeddingModel,

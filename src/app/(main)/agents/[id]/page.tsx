@@ -14,6 +14,7 @@ import {
   Drama,
   Key,
   AlertTriangle,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,7 @@ import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
 
 import { DeleteAgent } from "@/components/agent-configuration/delete-agent-button";
+import { CollaboratorsTab } from "@/components/agent-configuration/collaborators-tab";
 
 const CHAT_WEBSITE_URL =
   process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
@@ -672,7 +674,7 @@ export default function AgentConfigurationPage({
         value={activeTab}
         onValueChange={setActiveTab}
       >
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="description" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Description
@@ -688,6 +690,14 @@ export default function AgentConfigurationPage({
           <TabsTrigger value="model" className="flex items-center gap-2">
             <Bot className="h-4 w-4" />
             Model
+          </TabsTrigger>
+          <TabsTrigger
+            value="collaborators"
+            className="flex items-center gap-2"
+            disabled={agent.databaseId.length < 5}
+          >
+            <Users className="h-4 w-4" />
+            Collaborators
           </TabsTrigger>
           <TabsTrigger
             value="accesskeys"
@@ -1175,6 +1185,12 @@ export default function AgentConfigurationPage({
             documents={agent.documents ?? []}
             agent_id={agent.id}
             onChange={registerUpdate}
+          />
+        </TabsContent>
+        <TabsContent value="collaborators">
+          <CollaboratorsTab
+            agentId={agent.databaseId || agent.id}
+            onLeave={() => router.push("/agents")}
           />
         </TabsContent>
         <TabsContent value="accesskeys">

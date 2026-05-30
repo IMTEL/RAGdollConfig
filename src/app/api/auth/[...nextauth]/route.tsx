@@ -64,8 +64,10 @@ export const authOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.name = token.name ?? session.user.name;
-        session.user.image = token.image ?? session.user.image;
+        session.user.name =
+          typeof token.name === "string" ? token.name : session.user.name;
+        session.user.image =
+          typeof token.image === "string" ? token.image : session.user.image;
       }
       return session;
     },

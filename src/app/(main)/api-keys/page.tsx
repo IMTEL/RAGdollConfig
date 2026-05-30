@@ -91,7 +91,7 @@ export default function ApiKeysPage() {
         }
         const text = await response.text();
         if (!text) {
-          if (isMounted) setProviders({});
+          if (isMounted) setProviders({ llm: [], embedding: [] });
           return;
         }
         const data: ProvidersResponse = JSON.parse(text);

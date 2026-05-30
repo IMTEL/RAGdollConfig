@@ -82,7 +82,7 @@ export function SelectModel({
       try {
         const response = await axios.post("/api/get-models", {
           provider: normalizedProvider,
-          api_key: apiKey,
+          apiKey,
         });
         if (cancelled) return;
 
