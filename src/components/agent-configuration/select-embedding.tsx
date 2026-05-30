@@ -134,12 +134,6 @@ export function SelectEmbedding({
   })();
 
   useEffect(() => {
-    if ((!provider || !apiKey) && selectedEmbedding) {
-      onChange?.(null);
-    }
-  }, [apiKey, onChange, provider, selectedEmbedding]);
-
-  useEffect(() => {
     if (fetchError && selectedEmbedding) {
       onChange?.(null);
     }

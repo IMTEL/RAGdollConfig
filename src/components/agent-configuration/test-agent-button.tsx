@@ -3,7 +3,7 @@
 import { AgentUIState } from "@/app/(main)/agents/agent_data";
 import axios from "axios";
 import { Bot } from "lucide-react";
-import { ComponentProps, ReactNode, useEffect } from "react";
+import { ComponentProps, ReactNode } from "react";
 import { Button } from "../ui/button";
 import { AccessKey } from "./access-key-card";
 
@@ -29,98 +29,23 @@ export function TestAgent({
   icon,
   ariaLabel,
 }: TestAgentProps) {
-  const getExpiryTime = () => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
-  };
-
-  const getToday = () => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  };
-
-  const getAccessKeys = async () => {
-    const response = await axios.get("/api/fetch-access-keys", {
+  const getChatAccessKey = async (): Promise<AccessKey> => {
+    const response = await axios.get("/api/chat-access-key", {
       params: { agentId: agent.id },
     });
 
     if (response.status !== 200) {
-      console.error(
-        "Could not fetch  access-keys : " + response.status.toString()
-      );
-      throw Error("Failed to fectch access-keys");
-    }
-    return response.data as AccessKey[];
-  };
-
-  const createNewAccessKey = async (): Promise<AccessKey> => {
-    const response = await axios.get("/api/new-access-key", {
-      params: {
-        accessKeyName: "Test-Access-Key",
-        expiryDate: getExpiryTime().toISOString(),
-        agentId: agent.id,
-      },
-    });
-
-    if (response.status !== 200) {
-      console.error("Failed to create access key:", response.statusText);
-      throw new Error("Failed to create access token");
+      console.error("Failed to get chat access key:", response.statusText);
+      throw new Error("Failed to get chat access key");
     }
 
-    const accessKey = response.data as AccessKey;
-    localStorage.setItem("test_accesskey", JSON.stringify(accessKey));
-    return accessKey;
-  };
-
-  const revokeTestKey = async (accessKeyId: string | null) => {
-    if (accessKeyId == null) {
-      console.warn("Stored accesskey did not have an id");
-      return;
-    }
-    const response = await axios.get("/api/revoke-access-key", {
-      params: { agentId: agent.id, accessKeyId },
-    });
-    if (response.status !== 200) {
-      console.warn(
-        "Did not manage to delete old test access-key, is it deleted already?"
-      );
-    }
-  };
-
-  const getValidAccessKey = async (): Promise<AccessKey> => {
-    const accessKeyString: string | null =
-      localStorage.getItem("test_accesskey");
-
-    if (!accessKeyString) {
-      console.log("no stored access-key");
-      return await createNewAccessKey();
-    }
-    const accessKey: AccessKey = JSON.parse(accessKeyString);
-
-    if (
-      !accessKey.expiry_date ||
-      (accessKey.expiry_date &&
-        new Date(accessKey.expiry_date).getTime() <= getToday().getTime())
-    ) {
-      console.warn("test access-key has expired ");
-      revokeTestKey(accessKey.id);
-      return await createNewAccessKey();
-    }
-
-    const accessKeys = await getAccessKeys();
-
-    if (accessKeys.filter((key) => key.id == accessKey.id).length == 0) {
-      console.warn("access-key stored in localstorage does not exist");
-      return await createNewAccessKey();
-    }
-
-    return accessKey;
+    return response.data as AccessKey;
   };
 
   const handleTestAgent = async () => {
-    const accessKey = await getValidAccessKey();
-    if (!accessKey.key) throw Error("No key in access-key");
     try {
+      const accessKey = await getChatAccessKey();
+      if (!accessKey.key) throw Error("No key in access-key");
       const params = new URLSearchParams({ key: accessKey.key });
       const chatUrl = `${CHAT_WEBSITE_URL}/${agent.databaseId}?${params.toString()}`;
       window.open(chatUrl, "_blank");
@@ -137,8 +62,6 @@ export function TestAgent({
     (typeof resolvedLabel === "string" && resolvedLabel
       ? resolvedLabel
       : "Talk to Agent");
-
-  useEffect(() => {}, []);
 
   return (
     <Button

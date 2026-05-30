@@ -181,6 +181,10 @@ export const agentsClient = {
         throw new Error("Embedding API key is required when saving an agent");
       }
 
+      if (!agent.model && !agent.databaseId) {
+        throw new Error("Language model is required when creating an agent");
+      }
+
       return {
         id: agent.databaseId,
         name: agent.name,
@@ -191,8 +195,8 @@ export const agentsClient = {
           description: role.prompt,
           document_access: role.documentAccess,
         })),
-        llm_provider: agent.model?.provider || "idun",
-        llm_model: agent.model?.name || "none",
+        llm_provider: agent.model?.provider ?? "",
+        llm_model: agent.model?.name ?? "",
         llm_temperature: agent.temperature,
         llm_max_tokens: agent.maxTokens,
         llm_api_key: llmApiKey ?? "",

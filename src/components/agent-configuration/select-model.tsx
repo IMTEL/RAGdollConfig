@@ -61,9 +61,6 @@ export function SelectModel({
 
   useEffect(() => {
     if (!provider || !apiKey) {
-      if (selectedModel) {
-        onChange?.(null);
-      }
       setModels(null);
       setFetchError(null);
       setIsLoadingModels(false);

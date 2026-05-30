@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState, useMemo } from "react";
+import { use, useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -31,7 +31,9 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -50,6 +52,7 @@ import {
 import { UploadProgressDialog } from "@/components/ui/upload-progress-dialog";
 import axios from "axios";
 import { SelectModel } from "@/components/agent-configuration/select-model";
+import { SelectEmbedding } from "@/components/agent-configuration/select-embedding";
 import { RoleEditor } from "@/components/agent-configuration/role-editor";
 import { TestAgent } from "@/components/agent-configuration/test-agent-button";
 import { AgentUIState, agentsClient, DocumentMetadata } from "../agent_data";
@@ -65,6 +68,15 @@ const RAGDOLL_BASE_URL =
   process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
 
 type UploadStatus = "queued" | "processing" | "complete" | "error" | "failed";
+type ApiKeyUsage = "llm" | "embedding" | "both";
+
+interface StoredApiKey {
+  id: string;
+  label: string;
+  provider: string;
+  usage: ApiKeyUsage;
+  redacted_key: string;
+}
 
 export default function AgentConfigurationPage({
   params,
@@ -134,6 +146,81 @@ export default function AgentConfigurationPage({
   });
   const [activeTab, setActiveTab] = useState("description");
   const [useGraphSearch, setUseGraphSearch] = useState(false);
+  const [apiKeys, setApiKeys] = useState<StoredApiKey[]>([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [apiKeysError, setApiKeysError] = useState<string | null>(null);
+  const [llmKeyId, setLlmKeyId] = useState("");
+  const [embeddingKeyId, setEmbeddingKeyId] = useState("");
+  const [llmApiKeyValue, setLlmApiKeyValue] = useState<string | null>(null);
+  const [embeddingApiKeyValue, setEmbeddingApiKeyValue] = useState<
+    string | null
+  >(null);
+  const [llmKeyError, setLlmKeyError] = useState<string | null>(null);
+  const [embeddingKeyError, setEmbeddingKeyError] = useState<string | null>(
+    null
+  );
+  const [isFetchingLlmKey, setIsFetchingLlmKey] = useState(false);
+  const [isFetchingEmbeddingKey, setIsFetchingEmbeddingKey] = useState(false);
+  const llmKeyIdRef = useRef("");
+  const embeddingKeyIdRef = useRef("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadApiKeys = async () => {
+      setApiKeysLoading(true);
+      setApiKeysError(null);
+      try {
+        const response = await fetch("/api/get-api-keys");
+        if (!response.ok) {
+          throw new Error(`Failed to fetch API keys (${response.status})`);
+        }
+        const text = await response.text();
+        const data = text ? (JSON.parse(text) as StoredApiKey[]) : [];
+        if (!cancelled) {
+          setApiKeys(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setApiKeys([]);
+          setApiKeysError(
+            error instanceof Error ? error.message : "Failed to load API keys"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setApiKeysLoading(false);
+        }
+      }
+    };
+
+    void loadApiKeys();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const llmCompatibleKeys = useMemo(
+    () => apiKeys.filter((key) => key.usage !== "embedding"),
+    [apiKeys]
+  );
+
+  const embeddingCompatibleKeys = useMemo(
+    () => apiKeys.filter((key) => key.usage !== "llm"),
+    [apiKeys]
+  );
+
+  const selectedLlmKey = useMemo(
+    () => llmCompatibleKeys.find((key) => key.id === llmKeyId) ?? null,
+    [llmCompatibleKeys, llmKeyId]
+  );
+
+  const selectedEmbeddingKey = useMemo(
+    () =>
+      embeddingCompatibleKeys.find((key) => key.id === embeddingKeyId) ?? null,
+    [embeddingCompatibleKeys, embeddingKeyId]
+  );
 
   const handleInputChange = (
     field: keyof AgentUIState,
@@ -142,6 +229,131 @@ export default function AgentConfigurationPage({
     registerUpdate();
     setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
   };
+
+  const fetchApiKeySecret = useCallback(
+    async (keyId: string, target: "llm" | "embedding") => {
+      if (!keyId) return;
+
+      const isLlm = target === "llm";
+      if (isLlm) {
+        setIsFetchingLlmKey(true);
+        setLlmKeyError(null);
+        setLlmApiKeyValue(null);
+      } else {
+        setIsFetchingEmbeddingKey(true);
+        setEmbeddingKeyError(null);
+        setEmbeddingApiKeyValue(null);
+      }
+
+      try {
+        const response = await fetch(`/api/get-api-keys/${keyId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch API key (${response.status})`);
+        }
+        const text = await response.text();
+        if (!text) {
+          throw new Error("Empty response from server");
+        }
+        const data = JSON.parse(text);
+        const rawKey = data?.raw_key as string | undefined;
+        if (!rawKey) {
+          throw new Error("API key secret missing in response");
+        }
+
+        const isCurrentSelection = isLlm
+          ? llmKeyIdRef.current === keyId
+          : embeddingKeyIdRef.current === keyId;
+        if (!isCurrentSelection) return;
+
+        registerUpdate();
+        if (isLlm) {
+          setLlmApiKeyValue(rawKey);
+          setAgent(agent.id, (prev) => ({ ...prev, llmApiKey: rawKey }));
+        } else {
+          setEmbeddingApiKeyValue(rawKey);
+          setAgent(agent.id, (prev) => ({
+            ...prev,
+            embeddingApiKey: rawKey,
+          }));
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to load API key";
+        if (isLlm) {
+          setLlmKeyError(message);
+        } else {
+          setEmbeddingKeyError(message);
+        }
+      } finally {
+        if (isLlm) {
+          setIsFetchingLlmKey(false);
+        } else {
+          setIsFetchingEmbeddingKey(false);
+        }
+      }
+    },
+    [agent.id, registerUpdate, setAgent]
+  );
+
+  const handleLlmKeyChange = useCallback(
+    (keyId: string) => {
+      setLlmKeyId(keyId);
+      llmKeyIdRef.current = keyId;
+      setLlmKeyError(null);
+
+      const key = llmCompatibleKeys.find((item) => item.id === keyId) ?? null;
+      if (!key) {
+        setLlmApiKeyValue(null);
+        return;
+      }
+
+      if (
+        agent.model?.provider &&
+        agent.model.provider.toLowerCase() !== key.provider.toLowerCase()
+      ) {
+        registerUpdate();
+        setAgent(agent.id, (prev) => ({ ...prev, model: null }));
+      }
+
+      void fetchApiKeySecret(keyId, "llm");
+    },
+    [agent.id, agent.model, fetchApiKeySecret, llmCompatibleKeys, registerUpdate, setAgent]
+  );
+
+  const handleEmbeddingKeyChange = useCallback(
+    (keyId: string) => {
+      setEmbeddingKeyId(keyId);
+      embeddingKeyIdRef.current = keyId;
+      setEmbeddingKeyError(null);
+
+      const key =
+        embeddingCompatibleKeys.find((item) => item.id === keyId) ?? null;
+      if (!key) {
+        setEmbeddingApiKeyValue(null);
+        return;
+      }
+
+      if (agent.embeddingModel) {
+        const currentProvider = agent.embeddingModel
+          .split(":", 1)[0]
+          ?.toLowerCase();
+        if (currentProvider !== key.provider.toLowerCase()) {
+          registerUpdate();
+          setAgent(agent.id, (prev) => ({ ...prev, embeddingModel: "" }));
+        }
+      }
+
+      void fetchApiKeySecret(keyId, "embedding");
+    },
+    [
+      agent.embeddingModel,
+      agent.id,
+      embeddingCompatibleKeys,
+      fetchApiKeySecret,
+      registerUpdate,
+      setAgent,
+    ]
+  );
 
   const pollUploadStatus = useCallback(
     async ({
@@ -618,6 +830,14 @@ export default function AgentConfigurationPage({
       (doc) => doc.id && !accessedDocIds.has(doc.id)
     );
   }, [agent.documents, agent.roles]);
+
+  const currentEmbeddingProvider =
+    agent.embeddingModel?.split(":", 1)[0]?.toLowerCase() || null;
+  const modelProvider = selectedLlmKey?.provider ?? agent.model?.provider ?? null;
+  const modelApiKey = llmApiKeyValue ?? agent.llmApiKey;
+  const embeddingProvider =
+    selectedEmbeddingKey?.provider ?? currentEmbeddingProvider;
+  const embeddingApiKey = embeddingApiKeyValue ?? agent.embeddingApiKey;
 
   // Determine temperature max based on model provider
   const tempMax = agent.model?.provider?.toLowerCase() === "idun" ? 2 : 1;
@@ -1206,6 +1426,49 @@ export default function AgentConfigurationPage({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {apiKeysError && (
+                  <p className="text-destructive text-sm">{apiKeysError}</p>
+                )}
+                <div className="grid gap-2">
+                  <Label htmlFor="llm-api-key">Language model API key</Label>
+                  <Select
+                    value={llmKeyId}
+                    onValueChange={handleLlmKeyChange}
+                    disabled={
+                      apiKeysLoading || llmCompatibleKeys.length === 0
+                    }
+                  >
+                    <SelectTrigger id="llm-api-key" className="w-full">
+                      <SelectValue
+                        placeholder={
+                          apiKeysLoading
+                            ? "Loading API keys..."
+                            : llmCompatibleKeys.length === 0
+                              ? "No compatible keys available"
+                              : "Keep current key or select a replacement"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Available API keys</SelectLabel>
+                        {llmCompatibleKeys.map((key) => (
+                          <SelectItem key={key.id} value={key.id}>
+                            {key.label} · {key.redacted_key}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {isFetchingLlmKey && (
+                    <p className="text-muted-foreground text-sm">
+                      Loading API key secret...
+                    </p>
+                  )}
+                  {llmKeyError && (
+                    <p className="text-destructive text-sm">{llmKeyError}</p>
+                  )}
+                </div>
                 <div className="grid gap-2">
                   <Label htmlFor="model">Model</Label>
                   <SelectModel
@@ -1215,21 +1478,84 @@ export default function AgentConfigurationPage({
                       setAgent(agent.id, (a) => ({ ...a, model }));
                     }}
                     allowedProviders={
-                      agent.model?.provider ? [agent.model.provider] : undefined
+                      selectedLlmKey
+                        ? [selectedLlmKey.provider]
+                        : agent.model?.provider
+                          ? [agent.model.provider]
+                          : undefined
                     }
-                    provider={agent.model?.provider ?? null}
-                    apiKey={agent.llmApiKey}
-                    disabled={!agent.llmApiKey}
+                    provider={modelProvider}
+                    apiKey={modelApiKey}
+                    isApiKeyLoading={isFetchingLlmKey}
+                    apiKeyError={llmKeyError}
+                    disabled={isFetchingLlmKey || !modelApiKey}
                   />
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="embedding-api-key">Embedding API key</Label>
+                  <Select
+                    value={embeddingKeyId}
+                    onValueChange={handleEmbeddingKeyChange}
+                    disabled={
+                      apiKeysLoading || embeddingCompatibleKeys.length === 0
+                    }
+                  >
+                    <SelectTrigger id="embedding-api-key" className="w-full">
+                      <SelectValue
+                        placeholder={
+                          apiKeysLoading
+                            ? "Loading API keys..."
+                            : embeddingCompatibleKeys.length === 0
+                              ? "No compatible keys available"
+                              : "Keep current key or select a replacement"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Available API keys</SelectLabel>
+                        {embeddingCompatibleKeys.map((key) => (
+                          <SelectItem key={key.id} value={key.id}>
+                            {key.label} · {key.redacted_key}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {isFetchingEmbeddingKey && (
+                    <p className="text-muted-foreground text-sm">
+                      Loading API key secret...
+                    </p>
+                  )}
+                  {embeddingKeyError && (
+                    <p className="text-destructive text-sm">
+                      {embeddingKeyError}
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="embedding-model">Embedding Model</Label>
-                  <Input
-                    id="embedding-model"
-                    value={agent.embeddingModel || "Not set"}
-                    readOnly
-                    disabled
-                    className="cursor-default"
+                  <SelectEmbedding
+                    selectedEmbedding={agent.embeddingModel}
+                    onChange={(embedding) => {
+                      registerUpdate();
+                      setAgent(agent.id, (a) => ({
+                        ...a,
+                        embeddingModel: embedding ?? "",
+                      }));
+                    }}
+                    allowedProviders={
+                      selectedEmbeddingKey
+                        ? [selectedEmbeddingKey.provider]
+                        : currentEmbeddingProvider
+                          ? [currentEmbeddingProvider]
+                          : undefined
+                    }
+                    provider={embeddingProvider}
+                    apiKey={embeddingApiKey}
+                    isApiKeyLoading={isFetchingEmbeddingKey}
+                    apiKeyError={embeddingKeyError}
+                    disabled={isFetchingEmbeddingKey || !embeddingApiKey}
                   />
                 </div>
                 <div className="grid gap-2">
