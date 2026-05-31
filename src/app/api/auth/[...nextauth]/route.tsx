@@ -1,8 +1,6 @@
 import axios from "axios";
 import NextAuth, { Account, AuthOptions } from "next-auth";
 import { JWT } from "next-auth/jwt";
-import Credentials from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
 import KeycloakProvider from "next-auth/providers/keycloak";
 
 declare module "next-auth/jwt" {
@@ -17,29 +15,12 @@ declare module "next-auth/jwt" {
 export const authOptions = {
   session: { strategy: "jwt" },
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    }),
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_CLIENT_ID ?? "ragdoll-config",
       clientSecret: process.env.KEYCLOAK_CLIENT_SECRET ?? "",
       issuer:
         process.env.KEYCLOAK_ISSUER ??
         "http://localhost:8080/realms/ragdoll",
-    }),
-    Credentials({
-      id: "dev",
-      credentials: {},
-      async authorize() {
-        if (process.env.NODE_ENV !== "development")
-          throw new Error("Can only be used in dev environment");
-        return {
-          id: "1",
-          name: "Dev user",
-          email: "dev@example.com",
-        };
-      },
     }),
   ],
 
@@ -81,12 +62,8 @@ export const authOptions = {
 
 function getProviderToken(provider: string, account: Account): string | null {
   switch (provider) {
-    case "google":
-      return account?.id_token ?? null;
     case "keycloak":
       return account?.id_token ?? account?.access_token ?? null;
-    case "dev":
-      return "dev";
     default:
       console.error("Provider not recognized");
       return null;

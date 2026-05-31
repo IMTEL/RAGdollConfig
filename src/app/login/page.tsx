@@ -1,13 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import {
-  googleSignIn,
-  keycloakRegister,
-  keycloakSignIn,
-  testUserSignIn,
-} from "@/lib/auth";
-import { LogIn, User, UserPlus } from "lucide-react";
-import { FcGoogle } from "react-icons/fc";
+import { keycloakRegister, keycloakSignIn } from "@/lib/auth";
+import { LogIn, UserPlus } from "lucide-react";
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
@@ -50,24 +44,6 @@ function LoginContent() {
             <UserPlus className="text-xl" />
             <span className="font-medium">Create account</span>
           </Button>
-          <Button
-            onClick={googleSignIn}
-            variant="outline"
-            className="flex w-full items-center justify-center gap-2 py-3"
-          >
-            <FcGoogle className="text-xl" />
-            <span className="font-medium">Sign in with Google</span>
-          </Button>
-          {process.env.NODE_ENV === "development" && (
-            <Button
-              onClick={testUserSignIn}
-              variant="outline"
-              className="flex w-full items-center justify-center gap-2 py-3"
-            >
-              <User className="text-xl" />
-              <span className="font-medium">Test Account</span>
-            </Button>
-          )}
         </div>
       </div>
     </main>
@@ -76,7 +52,13 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-gray-100">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gray-100">
+          Loading...
+        </div>
+      }
+    >
       <LoginContent />
     </Suspense>
   );

@@ -2,13 +2,6 @@
 import axios from "axios";
 import { signIn, signOut } from "next-auth/react";
 
-export const testUserSignIn = () => {
-  signIn("dev", {
-    redirect: true,
-    callbackUrl: "/",
-  });
-};
-
 export const keycloakSignIn = () =>
   signIn("keycloak", {
     callbackUrl: "/",
@@ -24,11 +17,6 @@ export const keycloakRegister = () =>
       kc_action: "register",
     }
   );
-
-export const googleSignIn = () =>
-  signIn("google", {
-    callbackUrl: "/",
-  });
 
 export const handleSignOut = async () => {
   try {
