@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   if (!sessionToken)
     return NextResponse.json({ error: "No access token" }, { status: 401 });
 
-  const upstream = await axios.get(`${BACKEND_API_URL}/agents`, {
+  const upstream = await axios.get(`${BACKEND_API_URL}/agents/`, {
     headers: {
       Authorization: `Bearer ${sessionToken}`,
       Accept: "application/json",

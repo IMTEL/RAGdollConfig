@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const agentId = searchParams.get("agent_id");
 
-  const upstream = await axios.get(`${BACKEND_API_URL}/fetch-agent/`, {
+  const upstream = await axios.get(`${BACKEND_API_URL}/fetch-agent`, {
     params: { agent_id: agentId },
     headers: {
       Authorization: `Bearer ${sessionToken}`,
@@ -20,9 +20,8 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const body = await upstream.data();
-  return new NextResponse(body, {
+  const body = await upstream.data;
+  return NextResponse.json(body, {
     status: upstream.status,
-    headers: { "Content-Type": "application/json" },
   });
 }

@@ -19,6 +19,6 @@ export default withAuth(
 export const config = {
   matcher: [
     // protect everything EXCEPT:
-    "/((?!api/auth|_next|favicon\\.ico|robots\\.txt|sitemap\\.xml|healthz).*)",
+    "/((?!login|api/auth|_next|favicon\\.ico|robots\\.txt|sitemap\\.xml|healthz).*)",
   ],
 };

@@ -3,9 +3,6 @@ import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { Copy, Eye, Key } from "lucide-react";
 import { useState } from "react";
-const RAGDOLL_BASE_URL =
-  process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
-const backend_api_url = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 
 export interface AccessKey {
   id: string | null;
@@ -27,7 +24,7 @@ export function AccessKeyCard({
   onRevoke,
   agentId,
 }: AccessKeyCardProps) {
-  const [displayAccessKey, setDisplayAccessKey] = useState<Boolean>(false);
+  const [displayAccessKey, setDisplayAccessKey] = useState<boolean>(false);
 
   const getStatus = () => {
     if (!accessKey.expiry_date) return true;
@@ -40,8 +37,8 @@ export function AccessKeyCard({
       return;
     }
 
-    const response = await axios.get(`${backend_api_url}/revoke-accesskey`, {
-      params: { agent_id: agentId, access_key_id: accessKey.id },
+    const response = await axios.get("/api/revoke-access-key", {
+      params: { agentId, accessKeyId: accessKey.id },
     });
 
     if (response.status !== 200) {

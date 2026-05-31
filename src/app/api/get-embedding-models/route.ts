@@ -14,9 +14,11 @@ export async function POST(req: NextRequest) {
   const payload = (await req.json()) as {
     provider?: string;
     apiKey?: string;
+    api_key?: string;
   };
+  const apiKey = payload?.apiKey ?? payload?.api_key;
 
-  if (!payload?.provider || !payload?.apiKey) {
+  if (!payload?.provider || !apiKey) {
     return NextResponse.json(
       { error: "Missing required fields: provider and apiKey" },
       { status: 400 }
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
       `${BACKEND_API_URL}/get_embedding_models`,
       {
         provider: payload.provider,
-        api_key: payload.apiKey,
+        api_key: apiKey,
       },
       {
         headers: {

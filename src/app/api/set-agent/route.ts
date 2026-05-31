@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No access token" }, { status: 401 });
   const data = await req.json();
 
-  const upstream = await axios.post(`${BACKEND_API_URL}/update-agent`, data, {
+  const upstream = await axios.post(`${BACKEND_API_URL}/update-agent/`, data, {
     headers: {
       Authorization: `Bearer ${sessionToken}`,
       Accept: "application/json",

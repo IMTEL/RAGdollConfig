@@ -26,8 +26,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LLM } from "@/app/(main)/agents/agent_data";
 import axios from "axios";
 
-const backend_api_url = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
-
 interface SelectAgentProps {
   selectedModel?: LLM | null;
   onChange?: (model: LLM | null) => void;
@@ -63,9 +61,6 @@ export function SelectModel({
 
   useEffect(() => {
     if (!provider || !apiKey) {
-      if (selectedModel) {
-        onChange?.(null);
-      }
       setModels(null);
       setFetchError(null);
       setIsLoadingModels(false);
@@ -82,9 +77,9 @@ export function SelectModel({
       setIsLoadingModels(true);
       setFetchError(null);
       try {
-        const response = await axios.post(`${backend_api_url}/get_models`, {
+        const response = await axios.post("/api/get-models", {
           provider: normalizedProvider,
-          api_key: apiKey,
+          apiKey,
         });
         if (cancelled) return;
 

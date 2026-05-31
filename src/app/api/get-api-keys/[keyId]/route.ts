@@ -6,13 +6,13 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL!;
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { keyId: string } }
+  { params }: { params: Promise<{ keyId: string }> }
 ) {
   const sessionToken = await getSessionToken(req);
   if (!sessionToken)
     return NextResponse.json({ error: "No access token" }, { status: 401 });
 
-  const { keyId } = params;
+  const { keyId } = await params;
 
   try {
     const upstream = await axios.get(`${BACKEND_API_URL}/api-keys/${keyId}`, {
@@ -34,6 +34,40 @@ export async function GET(
     console.error(`Failed to fetch API key ${keyId}:`, error);
     return NextResponse.json(
       { error: "Failed to fetch API key" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ keyId: string }> }
+) {
+  const sessionToken = await getSessionToken(req);
+  if (!sessionToken)
+    return NextResponse.json({ error: "No access token" }, { status: 401 });
+
+  const { keyId } = await params;
+
+  try {
+    const upstream = await axios.delete(`${BACKEND_API_URL}/api-keys/${keyId}`, {
+      headers: {
+        Authorization: `Bearer ${sessionToken}`,
+        Accept: "application/json",
+      },
+    });
+
+    return new NextResponse(null, { status: upstream.status });
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    }
+
+    console.error(`Failed to delete API key ${keyId}:`, error);
+    return NextResponse.json(
+      { error: "Failed to delete API key" },
       { status: 500 }
     );
   }

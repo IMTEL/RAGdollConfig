@@ -85,14 +85,13 @@ export default function ApiKeysPage() {
     async function fetchProviders() {
       try {
         setProviderError(null);
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-        const response = await fetch(`${backendUrl}/providers`);
+        const response = await fetch("/api/get-providers");
         if (!response.ok) {
           throw new Error(`Failed to fetch providers (${response.status})`);
         }
         const text = await response.text();
         if (!text) {
-          if (isMounted) setProviders({});
+          if (isMounted) setProviders({ llm: [], embedding: [] });
           return;
         }
         const data: ProvidersResponse = JSON.parse(text);
@@ -127,8 +126,7 @@ export default function ApiKeysPage() {
 
     try {
       setKeysError(null);
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-      const response = await fetch(`${backendUrl}/api-keys`);
+      const response = await fetch("/api/get-api-keys");
       if (!response.ok) {
         throw new Error(`Failed to fetch API keys (${response.status})`);
       }
@@ -173,8 +171,7 @@ export default function ApiKeysPage() {
     }
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-      const response = await fetch(`${backendUrl}/api-keys/${keyId}`, {
+      const response = await fetch(`/api/get-api-keys/${keyId}`, {
         method: "DELETE",
       });
 
@@ -288,8 +285,7 @@ export default function ApiKeysPage() {
     setFormError(null);
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-      const response = await fetch(`${backendUrl}/api-keys`, {
+      const response = await fetch("/api/get-api-keys", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
