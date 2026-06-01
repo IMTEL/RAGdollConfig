@@ -24,6 +24,7 @@ export function AccessKeyModal({
   const [name, setName] = useState<string>("");
   const [dateOpen, setDateOpen] = useState(false);
   const [date, setDate] = useState<Date | null>(null);
+  const [viewOnce, setViewOnce] = useState<boolean>(true);
 
   const getTommorow = () => {
     const today = new Date();
@@ -34,13 +35,15 @@ export function AccessKeyModal({
 
   const tryCreateAccessKey = async (
     name: string,
-    expiry_date: Date | null
+    expiry_date: Date | null,
+    view_once: boolean
   ): Promise<AccessKey | null> => {
     const response = await axios.get("/api/new-access-key", {
       params: {
         accessKeyName: name,
         agentId,
         expiryDate: expiry_date ? expiry_date.toISOString() : undefined,
+        viewOnce: view_once,
       },
     });
 
@@ -63,9 +66,14 @@ export function AccessKeyModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const accesskey: AccessKey | null = await tryCreateAccessKey(name, date);
+    const accesskey: AccessKey | null = await tryCreateAccessKey(
+      name,
+      date,
+      viewOnce
+    );
     setName("");
     setDate(null);
+    setViewOnce(true);
     if (accesskey) onKeyAdded(accesskey);
     onClose();
   };
@@ -133,6 +141,42 @@ export function AccessKeyModal({
               />
             </PopoverContent>
           </Popover>
+
+          <div className="space-y-3 rounded-md border p-3">
+            <Label className="text-sm font-medium">Key visibility</Label>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="radio"
+                name="key-visibility"
+                checked={viewOnce}
+                onChange={() => setViewOnce(true)}
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-medium">View once</span>
+                <span className="text-muted-foreground block text-sm">
+                  Show the key only when it is created.
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="radio"
+                name="key-visibility"
+                checked={!viewOnce}
+                onChange={() => setViewOnce(false)}
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  View anytime
+                </span>
+                <span className="text-muted-foreground block text-sm">
+                  Allow this key to be revealed again from the access-key list.
+                </span>
+              </span>
+            </label>
+          </div>
 
           <div className={cn("flex justify-end gap-2")}>
             <button

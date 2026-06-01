@@ -11,6 +11,7 @@ export interface AccessKey {
   expiry_date: Date | null;
   created: Date | null;
   last_use: Date | null;
+  view_once?: boolean;
 }
 
 export interface AccessKeyCardProps {
@@ -70,6 +71,9 @@ export function AccessKeyCard({
             <Badge variant={getStatus() ? "default" : "secondary"}>
               {getStatus() ? "Active" : "Expired"}
             </Badge>
+            <Badge variant="outline">
+              {accessKey.view_once === false ? "View anytime" : "View once"}
+            </Badge>
           </div>
           <div className="flex items-center gap-2 font-mono text-sm">
             {accessKey.key !== null ? (
@@ -95,7 +99,7 @@ export function AccessKeyCard({
                 </Button>
               </div>
             ) : (
-              "Keys can only be viewed once"
+              "Key hidden"
             )}
           </div>
         </div>

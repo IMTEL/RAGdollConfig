@@ -13,9 +13,15 @@ export async function GET(req: NextRequest) {
   const agentId = searchParams.get("agentId");
   const accessKeyName = searchParams.get("accessKeyName");
   const expiryDate = searchParams.get("expiryDate");
+  const viewOnce = searchParams.get("viewOnce");
 
   const upstream = await axios.get(`${BACKEND_API_URL}/new-accesskey`, {
-    params: { agent_id: agentId, name: accessKeyName, expiry_date: expiryDate },
+    params: {
+      agent_id: agentId,
+      name: accessKeyName,
+      expiry_date: expiryDate,
+      view_once: viewOnce ?? undefined,
+    },
     headers: {
       Authorization: `Bearer ${sessionToken}`,
       Accept: "application/json",
