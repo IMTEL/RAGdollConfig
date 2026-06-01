@@ -1,4 +1,4 @@
-import { Bot, Database, Key, ArrowRight } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, Key } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
@@ -19,6 +19,13 @@ export default function Home() {
       icon: Key,
       href: "/api-keys",
       color: "text-orange-500",
+    },
+    {
+      title: "Guide",
+      description: "Learn how to create agents and use access keys externally",
+      icon: BookOpen,
+      href: "/guide",
+      color: "text-emerald-500",
     },
   ];
 

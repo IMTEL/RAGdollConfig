@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, ChevronDown, Key, LogOut, User, Zap } from "lucide-react";
+import { BookOpen, Bot, ChevronDown, Key, LogOut, User, Zap } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -33,6 +33,11 @@ const navigationItems = [
     title: "API Keys",
     url: "/api-keys",
     icon: Key,
+  },
+  {
+    title: "Guide",
+    url: "/guide",
+    icon: BookOpen,
   },
 ];
 
