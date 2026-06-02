@@ -1,6 +1,15 @@
 "use client";
 
-import { BookOpen, Bot, ChevronDown, Key, LogOut, User, Zap } from "lucide-react";
+import {
+  BookOpen,
+  Bot,
+  ChevronDown,
+  Key,
+  LogOut,
+  MessageSquare,
+  User,
+  Zap,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -39,6 +48,12 @@ const navigationItems = [
     url: "/guide",
     icon: BookOpen,
   },
+  {
+    title: "Chat",
+    url: `${process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001"}/external`,
+    icon: MessageSquare,
+    external: true,
+  },
 ];
 
 import { handleSignOut } from "@/lib/auth";
@@ -65,13 +80,25 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === item.url}
+                isActive={!item.external && pathname === item.url}
                 className="w-full justify-start"
               >
-                <Link href={item.url} className="flex items-center gap-3">
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.title}</span>
-                </Link>
+                {item.external ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3"
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </a>
+                ) : (
+                  <Link href={item.url} className="flex items-center gap-3">
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
