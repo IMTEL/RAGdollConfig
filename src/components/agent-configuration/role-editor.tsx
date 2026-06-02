@@ -34,6 +34,7 @@ export function RoleEditor({
     name: "",
     prompt: "",
     documentAccess: [] as string[],
+    functionAccess: [] as string[],
   });
 
   const handleCreateRole = () => {
@@ -42,6 +43,7 @@ export function RoleEditor({
       name: "",
       prompt: "",
       documentAccess: [],
+      functionAccess: [],
     });
     setIsModalOpen(true);
   };
@@ -52,6 +54,7 @@ export function RoleEditor({
       name: role.name,
       prompt: role.prompt,
       documentAccess: role.documentAccess,
+      functionAccess: role.functionAccess ?? [],
     });
     setIsModalOpen(true);
   };
@@ -106,6 +109,7 @@ export function RoleEditor({
       name: "",
       prompt: "",
       documentAccess: [],
+      functionAccess: [],
     });
 
     onChange?.();
@@ -121,6 +125,20 @@ export function RoleEditor({
       setFormData((prev) => ({
         ...prev,
         documentAccess: prev.documentAccess.filter((id) => id !== documentId),
+      }));
+    }
+  };
+
+  const handleFunctionAccessChange = (functionName: string, checked: boolean) => {
+    if (checked) {
+      setFormData((prev) => ({
+        ...prev,
+        functionAccess: [...prev.functionAccess, functionName],
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        functionAccess: prev.functionAccess.filter((name) => name !== functionName),
       }));
     }
   };
@@ -187,6 +205,20 @@ export function RoleEditor({
                         className="text-xs"
                       >
                         {getDocumentName(docId)}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {role.functionAccess && role.functionAccess.length > 0 && (
+                  <div className="mt-2 flex w-full flex-wrap gap-1">
+                    <p className="text-sm font-medium">Functions:</p>
+                    {role.functionAccess.map((functionName: string) => (
+                      <Badge
+                        key={functionName}
+                        variant="outline"
+                        className="text-xs"
+                      >
+                        {functionName}
                       </Badge>
                     ))}
                   </div>
@@ -321,6 +353,73 @@ export function RoleEditor({
                           </div>
                         )
                     )}
+                  </div>
+                </div>
+              )}
+
+              {agent.functions.length > 0 && (
+                <div>
+                  <div className="mb-3 flex items-center justify-between">
+                    <label className="text-sm font-medium">
+                      Function Access
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const allFunctionNames = agent.functions.map(
+                          (functionConfig) => functionConfig.name
+                        );
+                        const allSelected = allFunctionNames.every((name) =>
+                          formData.functionAccess.includes(name)
+                        );
+                        setFormData((prev) => ({
+                          ...prev,
+                          functionAccess: allSelected ? [] : allFunctionNames,
+                        }));
+                      }}
+                    >
+                      {agent.functions.every((functionConfig) =>
+                        formData.functionAccess.includes(functionConfig.name)
+                      )
+                        ? "Deselect All"
+                        : "Select All"}
+                    </Button>
+                  </div>
+                  <div className="max-h-40 space-y-3 overflow-y-auto">
+                    {agent.functions.map((functionConfig) => (
+                      <div
+                        key={functionConfig.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={`function-${functionConfig.id}`}
+                          checked={formData.functionAccess.includes(
+                            functionConfig.name
+                          )}
+                          onCheckedChange={(checked) =>
+                            handleFunctionAccessChange(
+                              functionConfig.name,
+                              checked as boolean
+                            )
+                          }
+                        />
+                        <label
+                          htmlFor={`function-${functionConfig.id}`}
+                          className="flex-1 cursor-pointer text-sm"
+                        >
+                          <span className="font-medium">
+                            {functionConfig.name}
+                          </span>
+                          {functionConfig.callInstructions && (
+                            <span className="text-muted-foreground ml-2">
+                              {functionConfig.callInstructions}
+                            </span>
+                          )}
+                        </label>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

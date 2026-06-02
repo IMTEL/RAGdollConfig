@@ -15,6 +15,7 @@ import {
   Key,
   AlertTriangle,
   Users,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -228,6 +229,81 @@ export default function AgentConfigurationPage({
   ) => {
     registerUpdate();
     setAgent(agent.id, (prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateFunction = (
+    functionId: string,
+    update: (prev: AgentUIState["functions"][number]) => AgentUIState["functions"][number]
+  ) => {
+    registerUpdate();
+    setAgent(agent.id, (prev) => ({
+      ...prev,
+      functions: prev.functions.map((functionConfig) =>
+        functionConfig.id === functionId ? update(functionConfig) : functionConfig
+      ),
+    }));
+  };
+
+  const addFunction = () => {
+    registerUpdate();
+    setAgent(agent.id, (prev) => ({
+      ...prev,
+      functions: [
+        ...prev.functions,
+        {
+          id: `function-${Date.now()}`,
+          name: "",
+          requiredFields: [],
+          callInstructions: "",
+          explanation: "",
+          exampleOutput: "",
+        },
+      ],
+    }));
+  };
+
+  const addVelociraptorFunction = () => {
+    registerUpdate();
+    setAgent(agent.id, (prev) => ({
+      ...prev,
+      functions: [
+        ...prev.functions,
+        {
+          id: `function-${Date.now()}`,
+          name: "velociraptor",
+          requiredFields: ["duration_seconds"],
+          callInstructions:
+            "Call this when the user asks to see a velociraptor or dinosaur animation.",
+          explanation:
+            "Displays a velociraptor animation in the external chat page.",
+          exampleOutput:
+            '{"name":"velociraptor","arguments":{"duration_seconds":3}}',
+        },
+      ],
+    }));
+  };
+
+  const deleteFunction = (functionId: string) => {
+    registerUpdate();
+    setAgent(agent.id, (prev) => {
+      const functionToDelete = prev.functions.find(
+        (functionConfig) => functionConfig.id === functionId
+      );
+      return {
+        ...prev,
+        functions: prev.functions.filter(
+          (functionConfig) => functionConfig.id !== functionId
+        ),
+        roles: functionToDelete
+          ? prev.roles.map((role) => ({
+              ...role,
+              functionAccess: (role.functionAccess ?? []).filter(
+                (name) => name !== functionToDelete.name
+              ),
+            }))
+          : prev.roles,
+      };
+    });
   };
 
   const fetchApiKeySecret = useCallback(
@@ -894,7 +970,7 @@ export default function AgentConfigurationPage({
         value={activeTab}
         onValueChange={setActiveTab}
       >
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="description" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Description
@@ -910,6 +986,10 @@ export default function AgentConfigurationPage({
           <TabsTrigger value="model" className="flex items-center gap-2">
             <Bot className="h-4 w-4" />
             Model
+          </TabsTrigger>
+          <TabsTrigger value="functions" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            Functions
           </TabsTrigger>
           <TabsTrigger
             value="collaborators"
@@ -1415,6 +1495,134 @@ export default function AgentConfigurationPage({
         </TabsContent>
         <TabsContent value="accesskeys">
           <AccessKeysPage agentId={agent.id} />
+        </TabsContent>
+        <TabsContent value="functions">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle>Function Calling</CardTitle>
+                    <CardDescription>
+                      Define external functions the LLM may request. Assign
+                      function access per role in the Roles tab.
+                    </CardDescription>
+                  </div>
+                  <Button onClick={addFunction}>
+                    <Wrench className="mr-2 h-4 w-4" />
+                    Add Function
+                  </Button>
+                  <Button variant="outline" onClick={addVelociraptorFunction}>
+                    Add Velociraptor Test
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {agent.functions.length === 0 ? (
+                  <div className="rounded-lg border p-8 text-center text-muted-foreground">
+                    No functions configured yet.
+                  </div>
+                ) : (
+                  agent.functions.map((functionConfig) => (
+                    <Card key={functionConfig.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <CardTitle className="text-base">
+                            {functionConfig.name || "Unnamed function"}
+                          </CardTitle>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteFunction(functionConfig.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid gap-2">
+                          <Label>Name</Label>
+                          <Input
+                            value={functionConfig.name}
+                            onChange={(event) =>
+                              updateFunction(functionConfig.id, (prev) => ({
+                                ...prev,
+                                name: event.target.value
+                                  .trim()
+                                  .replace(/[^a-zA-Z0-9_-]/g, ""),
+                              }))
+                            }
+                            placeholder="velociraptor"
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Required Fields</Label>
+                          <Input
+                            value={functionConfig.requiredFields.join(", ")}
+                            onChange={(event) =>
+                              updateFunction(functionConfig.id, (prev) => ({
+                                ...prev,
+                                requiredFields: event.target.value
+                                  .split(",")
+                                  .map((field) => field.trim())
+                                  .filter(Boolean),
+                              }))
+                            }
+                            placeholder="target, duration_seconds"
+                          />
+                          <p className="text-muted-foreground text-sm">
+                            Comma-separated JSON argument fields the LLM must
+                            provide.
+                          </p>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Call Instructions</Label>
+                          <Textarea
+                            value={functionConfig.callInstructions}
+                            onChange={(event) =>
+                              updateFunction(functionConfig.id, (prev) => ({
+                                ...prev,
+                                callInstructions: event.target.value,
+                              }))
+                            }
+                            placeholder="Call this when the user asks to see a velociraptor."
+                            className="min-h-24"
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Explanation</Label>
+                          <Textarea
+                            value={functionConfig.explanation || ""}
+                            onChange={(event) =>
+                              updateFunction(functionConfig.id, (prev) => ({
+                                ...prev,
+                                explanation: event.target.value,
+                              }))
+                            }
+                            placeholder="Optional explanation of what the external system will do."
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Example Output</Label>
+                          <Textarea
+                            value={functionConfig.exampleOutput || ""}
+                            onChange={(event) =>
+                              updateFunction(functionConfig.id, (prev) => ({
+                                ...prev,
+                                exampleOutput: event.target.value,
+                              }))
+                            }
+                            placeholder='{"name":"velociraptor","arguments":{"duration_seconds":3}}'
+                            className="font-mono"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         <TabsContent value="model">
           <div className="space-y-6">
