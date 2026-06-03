@@ -28,6 +28,7 @@ export interface AgentUIState {
   responseFormat: "text" | "structured";
   documents: DocumentMetadata[] | null; // null means not loaded yet
   roles: Role[];
+  functions: AgentFunction[];
   lastUpdated: string;
   uploaded: boolean; // whether the agent has been uploaded to the backend
   // RAG retrieval parameters
@@ -56,6 +57,7 @@ export function defaultAgent(): AgentUIState {
     responseFormat: "text",
     documents: null,
     roles: [],
+    functions: [],
     lastUpdated: "unknown",
     uploaded: false,
     topK: 5,
@@ -70,6 +72,23 @@ export interface Role {
   name: string;
   prompt: string;
   documentAccess: string[]; // Array of document IDs
+  functionAccess: string[];
+}
+
+export interface AgentFunction {
+  id: string;
+  name: string;
+  requiredFields: FunctionField[];
+  callInstructions: string;
+  explanation?: string;
+  exampleOutput?: string;
+}
+
+export interface FunctionField {
+  id: string;
+  name: string;
+  type: string;
+  arrayItemType?: string;
 }
 
 export interface LLM {
@@ -89,7 +108,7 @@ interface DatabaseAgent {
   llm_temperature: number;
   llm_max_tokens: number;
   llm_api_key: string | null;
-  access_key: string[]; // may change later
+  access_key?: unknown[]; // managed by backend access-key endpoints
   retrieval_method?: string;
   embedding_model?: string; // optional for now
   embedding_api_key: string | null;
@@ -99,6 +118,7 @@ interface DatabaseAgent {
   enableWebSearch: boolean; // not in backend and also we wont do this low key
   last_updated?: string;
   roles: DatabaseRole[];
+  functions?: DatabaseAgentFunction[];
   // RAG retrieval parameters
   top_k?: number;
   similarity_threshold?: number;
@@ -110,6 +130,39 @@ interface DatabaseRole {
   name: string;
   description: string;
   document_access: string[];
+  function_access?: string[];
+}
+
+interface DatabaseAgentFunction {
+  name: string;
+  required_fields: DatabaseFunctionField[];
+  call_instructions: string;
+  explanation?: string | null;
+  example_output?: string | null;
+}
+
+type DatabaseFunctionField =
+  | string
+  | { name: string; type?: string | null; array_item_type?: string | null };
+
+function normalizeFunctionField(
+  field: DatabaseFunctionField,
+  index: number
+): FunctionField {
+  if (typeof field === "string") {
+    return {
+      id: `field-${index + 1}`,
+      name: field,
+      type: "string",
+    };
+  }
+
+  return {
+    id: `field-${index + 1}`,
+    name: field.name,
+    type: field.type || "string",
+    arrayItemType: field.array_item_type || "",
+  };
 }
 
 interface BackendDocument {
@@ -157,6 +210,17 @@ export const agentsClient = {
             name: role.name,
             prompt: role.description,
             documentAccess: role.document_access,
+            functionAccess: role.function_access ?? [],
+          })),
+          functions: (agent.functions ?? []).map((functionConfig, index) => ({
+            id: `function-${index + 1}`,
+            name: functionConfig.name,
+            requiredFields: (functionConfig.required_fields ?? []).map(
+              normalizeFunctionField
+            ),
+            callInstructions: functionConfig.call_instructions ?? "",
+            explanation: functionConfig.explanation ?? "",
+            exampleOutput: functionConfig.example_output ?? "",
           })),
           lastUpdated: agent.last_updated || "unknown",
           uploaded: true,
@@ -194,6 +258,20 @@ export const agentsClient = {
           name: role.name,
           description: role.prompt,
           document_access: role.documentAccess,
+          function_access: role.functionAccess ?? [],
+        })),
+        functions: agent.functions.map((functionConfig) => ({
+          name: functionConfig.name,
+          required_fields: functionConfig.requiredFields.map((field) => ({
+            name: field.name,
+            type: field.type,
+            ...(field.arrayItemType
+              ? { array_item_type: field.arrayItemType }
+              : {}),
+          })),
+          call_instructions: functionConfig.callInstructions,
+          explanation: functionConfig.explanation || null,
+          example_output: functionConfig.exampleOutput || null,
         })),
         llm_provider: agent.model?.provider ?? "",
         llm_model: agent.model?.name ?? "",
@@ -201,7 +279,6 @@ export const agentsClient = {
         llm_max_tokens: agent.maxTokens,
         llm_api_key: llmApiKey ?? "",
         embedding_api_key: embeddingApiKey ?? "",
-        access_key: [],
         retrieval_method: "semantic",
         embedding_model: agent.embeddingModel,
         status: agent.status,
@@ -239,6 +316,7 @@ export const agentsClient = {
         name: name,
         prompt: "",
         documentAccess: [],
+        functionAccess: [],
       },
     ];
     return this.updateAgent(agent);
