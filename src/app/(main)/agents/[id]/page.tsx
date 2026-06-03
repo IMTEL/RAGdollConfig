@@ -6,6 +6,8 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Bot,
+  ChevronDown,
+  ChevronRight,
   Save,
   Upload,
   FileText,
@@ -16,6 +18,7 @@ import {
   AlertTriangle,
   Users,
   Wrench,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +59,13 @@ import { SelectModel } from "@/components/agent-configuration/select-model";
 import { SelectEmbedding } from "@/components/agent-configuration/select-embedding";
 import { RoleEditor } from "@/components/agent-configuration/role-editor";
 import { TestAgent } from "@/components/agent-configuration/test-agent-button";
-import { AgentUIState, agentsClient, DocumentMetadata } from "../agent_data";
+import {
+  AgentFunction,
+  AgentUIState,
+  agentsClient,
+  DocumentMetadata,
+  FunctionField,
+} from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
 
@@ -67,6 +76,30 @@ const CHAT_WEBSITE_URL =
   process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
 const RAGDOLL_BASE_URL =
   process.env.NEXT_PUBLIC_RAGDOLL_BASE_URL || "http://localhost:8000";
+const COMMON_FUNCTION_FIELD_TYPES = [
+  "string",
+  "number",
+  "integer",
+  "boolean",
+  "object",
+  "array",
+] as const;
+const CUSTOM_FUNCTION_FIELD_TYPE = "__custom";
+
+const getFunctionFieldTypeSelectValue = (type: string) =>
+  COMMON_FUNCTION_FIELD_TYPES.includes(
+    type as (typeof COMMON_FUNCTION_FIELD_TYPES)[number]
+  )
+    ? type
+    : CUSTOM_FUNCTION_FIELD_TYPE;
+
+const formatFunctionFieldSummary = (field: FunctionField) => {
+  const fieldName = field.name || "unnamed";
+  if (field.type === "array" && field.arrayItemType) {
+    return `${fieldName}: array<${field.arrayItemType}>`;
+  }
+  return `${fieldName}: ${field.type || "custom"}`;
+};
 
 type UploadStatus = "queued" | "processing" | "complete" | "error" | "failed";
 type ApiKeyUsage = "llm" | "embedding" | "both";
@@ -160,6 +193,9 @@ export default function AgentConfigurationPage({
   const [embeddingKeyError, setEmbeddingKeyError] = useState<string | null>(
     null
   );
+  const [collapsedFunctionIds, setCollapsedFunctionIds] = useState<Set<string>>(
+    new Set()
+  );
   const [isFetchingLlmKey, setIsFetchingLlmKey] = useState(false);
   const [isFetchingEmbeddingKey, setIsFetchingEmbeddingKey] = useState(false);
   const llmKeyIdRef = useRef("");
@@ -233,7 +269,7 @@ export default function AgentConfigurationPage({
 
   const updateFunction = (
     functionId: string,
-    update: (prev: AgentUIState["functions"][number]) => AgentUIState["functions"][number]
+    update: (prev: AgentFunction) => AgentFunction
   ) => {
     registerUpdate();
     setAgent(agent.id, (prev) => ({
@@ -244,14 +280,62 @@ export default function AgentConfigurationPage({
     }));
   };
 
+  const toggleFunctionCollapsed = (functionId: string) => {
+    setCollapsedFunctionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(functionId)) {
+        next.delete(functionId);
+      } else {
+        next.add(functionId);
+      }
+      return next;
+    });
+  };
+
+  const addFunctionField = (functionId: string) => {
+    updateFunction(functionId, (prev) => ({
+      ...prev,
+      requiredFields: [
+        ...prev.requiredFields,
+        {
+          id: `field-${Date.now()}`,
+          name: "",
+          type: "string",
+          arrayItemType: "",
+        },
+      ],
+    }));
+  };
+
+  const updateFunctionField = (
+    functionId: string,
+    fieldId: string,
+    update: Partial<Omit<FunctionField, "id">>
+  ) => {
+    updateFunction(functionId, (prev) => ({
+      ...prev,
+      requiredFields: prev.requiredFields.map((field) =>
+        field.id === fieldId ? { ...field, ...update } : field
+      ),
+    }));
+  };
+
+  const deleteFunctionField = (functionId: string, fieldId: string) => {
+    updateFunction(functionId, (prev) => ({
+      ...prev,
+      requiredFields: prev.requiredFields.filter((field) => field.id !== fieldId),
+    }));
+  };
+
   const addFunction = () => {
     registerUpdate();
+    const functionId = `function-${Date.now()}`;
     setAgent(agent.id, (prev) => ({
       ...prev,
       functions: [
         ...prev.functions,
         {
-          id: `function-${Date.now()}`,
+          id: functionId,
           name: "",
           requiredFields: [],
           callInstructions: "",
@@ -260,18 +344,31 @@ export default function AgentConfigurationPage({
         },
       ],
     }));
+    setCollapsedFunctionIds((prev) => {
+      const next = new Set(prev);
+      next.delete(functionId);
+      return next;
+    });
   };
 
   const addVelociraptorFunction = () => {
     registerUpdate();
+    const functionId = `function-${Date.now()}`;
     setAgent(agent.id, (prev) => ({
       ...prev,
       functions: [
         ...prev.functions,
         {
-          id: `function-${Date.now()}`,
+          id: functionId,
           name: "velociraptor",
-          requiredFields: ["duration_seconds"],
+          requiredFields: [
+            {
+              id: `field-${Date.now()}`,
+              name: "duration_seconds",
+              type: "number",
+              arrayItemType: "",
+            },
+          ],
           callInstructions:
             "Call this when the user asks to see a velociraptor or dinosaur animation.",
           explanation:
@@ -281,6 +378,11 @@ export default function AgentConfigurationPage({
         },
       ],
     }));
+    setCollapsedFunctionIds((prev) => {
+      const next = new Set(prev);
+      next.delete(functionId);
+      return next;
+    });
   };
 
   const deleteFunction = (functionId: string) => {
@@ -1527,19 +1629,50 @@ export default function AgentConfigurationPage({
                     <Card key={functionConfig.id}>
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between gap-3">
-                          <CardTitle className="text-base">
-                            {functionConfig.name || "Unnamed function"}
-                          </CardTitle>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteFunction(functionConfig.id)}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleFunctionCollapsed(functionConfig.id)
+                            }
+                            className="flex min-w-0 flex-1 items-center gap-2 text-left"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            {collapsedFunctionIds.has(functionConfig.id) ? (
+                              <ChevronRight className="text-muted-foreground h-4 w-4 flex-shrink-0" />
+                            ) : (
+                              <ChevronDown className="text-muted-foreground h-4 w-4 flex-shrink-0" />
+                            )}
+                            <div className="min-w-0 space-y-1">
+                              <CardTitle className="truncate text-base">
+                                {functionConfig.name || "Unnamed function"}
+                              </CardTitle>
+                              <CardDescription className="truncate">
+                                {functionConfig.requiredFields.length > 0
+                                  ? functionConfig.requiredFields
+                                      .map(formatFunctionFieldSummary)
+                                      .join(", ")
+                                  : "No required fields"}
+                              </CardDescription>
+                            </div>
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {functionConfig.requiredFields.length} field
+                              {functionConfig.requiredFields.length === 1
+                                ? ""
+                                : "s"}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteFunction(functionConfig.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      {!collapsedFunctionIds.has(functionConfig.id) && (
+                        <CardContent className="space-y-4">
                         <div className="grid gap-2">
                           <Label>Name</Label>
                           <Input
@@ -1556,23 +1689,155 @@ export default function AgentConfigurationPage({
                           />
                         </div>
                         <div className="grid gap-2">
-                          <Label>Required Fields</Label>
-                          <Input
-                            value={functionConfig.requiredFields.join(", ")}
-                            onChange={(event) =>
-                              updateFunction(functionConfig.id, (prev) => ({
-                                ...prev,
-                                requiredFields: event.target.value
-                                  .split(",")
-                                  .map((field) => field.trim())
-                                  .filter(Boolean),
-                              }))
-                            }
-                            placeholder="target, duration_seconds"
-                          />
+                          <div className="flex items-center justify-between gap-3">
+                            <Label>Required Fields</Label>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addFunctionField(functionConfig.id)}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add Field
+                            </Button>
+                          </div>
+                          <div className="space-y-3">
+                            {functionConfig.requiredFields.length === 0 ? (
+                              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                                No required fields configured.
+                              </div>
+                            ) : (
+                              functionConfig.requiredFields.map((field) => (
+                                <div
+                                  key={field.id}
+                                  className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_180px_auto]"
+                                >
+                                  <div className="grid gap-2">
+                                    <Label>Field name</Label>
+                                    <Input
+                                      value={field.name}
+                                      onChange={(event) =>
+                                        updateFunctionField(
+                                          functionConfig.id,
+                                          field.id,
+                                          {
+                                            name: event.target.value
+                                              .trim()
+                                              .replace(/[^a-zA-Z0-9_-]/g, ""),
+                                          }
+                                        )
+                                      }
+                                      placeholder="duration_seconds"
+                                    />
+                                  </div>
+                                  <div className="grid gap-2">
+                                    <Label>Data type</Label>
+                                    <Select
+                                      value={getFunctionFieldTypeSelectValue(
+                                        field.type
+                                      )}
+                                      onValueChange={(value) =>
+                                        updateFunctionField(
+                                          functionConfig.id,
+                                          field.id,
+                                          {
+                                            type:
+                                              value ===
+                                              CUSTOM_FUNCTION_FIELD_TYPE
+                                                ? ""
+                                                : value,
+                                            arrayItemType:
+                                              value === "array"
+                                                ? field.arrayItemType || ""
+                                                : "",
+                                          }
+                                        )
+                                      }
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select type" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="string">
+                                          string
+                                        </SelectItem>
+                                        <SelectItem value="number">
+                                          number
+                                        </SelectItem>
+                                        <SelectItem value="integer">
+                                          integer
+                                        </SelectItem>
+                                        <SelectItem value="boolean">
+                                          boolean
+                                        </SelectItem>
+                                        <SelectItem value="object">
+                                          object
+                                        </SelectItem>
+                                        <SelectItem value="array">
+                                          array
+                                        </SelectItem>
+                                        <SelectItem
+                                          value={CUSTOM_FUNCTION_FIELD_TYPE}
+                                        >
+                                          custom
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    {getFunctionFieldTypeSelectValue(
+                                      field.type
+                                    ) === CUSTOM_FUNCTION_FIELD_TYPE && (
+                                      <Input
+                                        value={field.type}
+                                        onChange={(event) =>
+                                          updateFunctionField(
+                                            functionConfig.id,
+                                            field.id,
+                                            {
+                                              type: event.target.value,
+                                              arrayItemType: "",
+                                            }
+                                          )
+                                        }
+                                        placeholder="Custom type"
+                                      />
+                                    )}
+                                    {field.type === "array" && (
+                                      <Input
+                                        value={field.arrayItemType || ""}
+                                        onChange={(event) =>
+                                          updateFunctionField(
+                                            functionConfig.id,
+                                            field.id,
+                                            {
+                                              arrayItemType:
+                                                event.target.value,
+                                            }
+                                          )
+                                        }
+                                        placeholder="Array item type (optional)"
+                                      />
+                                    )}
+                                  </div>
+                                  <div className="flex items-end">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        deleteFunctionField(
+                                          functionConfig.id,
+                                          field.id
+                                        )
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
                           <p className="text-muted-foreground text-sm">
-                            Comma-separated JSON argument fields the LLM must
-                            provide.
+                            JSON argument fields the LLM must provide, including
+                            the expected data type for each field.
                           </p>
                         </div>
                         <div className="grid gap-2">
@@ -1616,7 +1881,8 @@ export default function AgentConfigurationPage({
                             className="font-mono"
                           />
                         </div>
-                      </CardContent>
+                        </CardContent>
+                      )}
                     </Card>
                   ))
                 )}

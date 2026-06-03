@@ -78,10 +78,17 @@ export interface Role {
 export interface AgentFunction {
   id: string;
   name: string;
-  requiredFields: string[];
+  requiredFields: FunctionField[];
   callInstructions: string;
   explanation?: string;
   exampleOutput?: string;
+}
+
+export interface FunctionField {
+  id: string;
+  name: string;
+  type: string;
+  arrayItemType?: string;
 }
 
 export interface LLM {
@@ -128,10 +135,34 @@ interface DatabaseRole {
 
 interface DatabaseAgentFunction {
   name: string;
-  required_fields: string[];
+  required_fields: DatabaseFunctionField[];
   call_instructions: string;
   explanation?: string | null;
   example_output?: string | null;
+}
+
+type DatabaseFunctionField =
+  | string
+  | { name: string; type?: string | null; array_item_type?: string | null };
+
+function normalizeFunctionField(
+  field: DatabaseFunctionField,
+  index: number
+): FunctionField {
+  if (typeof field === "string") {
+    return {
+      id: `field-${index + 1}`,
+      name: field,
+      type: "string",
+    };
+  }
+
+  return {
+    id: `field-${index + 1}`,
+    name: field.name,
+    type: field.type || "string",
+    arrayItemType: field.array_item_type || "",
+  };
 }
 
 interface BackendDocument {
@@ -184,7 +215,9 @@ export const agentsClient = {
           functions: (agent.functions ?? []).map((functionConfig, index) => ({
             id: `function-${index + 1}`,
             name: functionConfig.name,
-            requiredFields: functionConfig.required_fields ?? [],
+            requiredFields: (functionConfig.required_fields ?? []).map(
+              normalizeFunctionField
+            ),
             callInstructions: functionConfig.call_instructions ?? "",
             explanation: functionConfig.explanation ?? "",
             exampleOutput: functionConfig.example_output ?? "",
@@ -229,7 +262,13 @@ export const agentsClient = {
         })),
         functions: agent.functions.map((functionConfig) => ({
           name: functionConfig.name,
-          required_fields: functionConfig.requiredFields,
+          required_fields: functionConfig.requiredFields.map((field) => ({
+            name: field.name,
+            type: field.type,
+            ...(field.arrayItemType
+              ? { array_item_type: field.arrayItemType }
+              : {}),
+          })),
           call_instructions: functionConfig.callInstructions,
           explanation: functionConfig.explanation || null,
           example_output: functionConfig.exampleOutput || null,
