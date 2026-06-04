@@ -4,6 +4,8 @@ import { getSessionToken } from "@/lib/hooks/token";
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL!;
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const sessionToken = await getSessionToken(req);
   if (!sessionToken)
@@ -13,9 +15,15 @@ export async function GET(req: NextRequest) {
     headers: {
       Authorization: `Bearer ${sessionToken}`,
       Accept: "application/json",
+      "Cache-Control": "no-store",
     },
   });
 
   const body = await upstream.data;
-  return NextResponse.json(body, { status: upstream.status });
+  return NextResponse.json(body, {
+    status: upstream.status,
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
 }
