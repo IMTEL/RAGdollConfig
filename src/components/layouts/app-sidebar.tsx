@@ -55,9 +55,7 @@ const navigationItems = [
     external: true,
   },
 ];
-
-import { handleSignOut } from "@/lib/auth";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "@/lib/auth-client";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -129,7 +127,12 @@ export function AppSidebar() {
               <span>Settings</span>
             </DropdownMenuItem>*/}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+            <DropdownMenuItem
+              onClick={async () => {
+                await signOut({});
+              }}
+              className="text-red-600"
+            >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>
