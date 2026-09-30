@@ -1,29 +1,20 @@
-"use client";
-import axios from "axios";
-import { signIn, signOut } from "next-auth/react";
+import { betterAuth } from "better-auth";
+import { genericOAuth, keycloak, jwt } from "better-auth/plugins";
 
-export const keycloakSignIn = () =>
-  signIn("keycloak", {
-    callbackUrl: "/",
-  });
-
-export const keycloakRegister = () =>
-  signIn(
-    "keycloak",
-    {
-      callbackUrl: "/",
-    },
-    {
-      kc_action: "register",
-    }
-  );
-
-export const handleSignOut = async () => {
-  try {
-    await axios.get("/api/logout");
-  } catch (error) {
-    console.warn("Backend logout failed; clearing frontend session", error);
-  }
-
-  signOut({ callbackUrl: "/login" });
-};
+export const auth = betterAuth({
+  plugins: [
+    genericOAuth({
+      config: [
+        keycloak({
+          clientId: process.env.KEYCLOAK_CLIENT_ID ?? "ragdoll-config",
+          clientSecret:
+            process.env.KEYCLOAK_CLIENT_SECRET ?? "ragdoll-config-secret",
+          issuer:
+            process.env.KEYCLOAK_ISSUER ??
+            "http://localhost:8080/realms/ragdoll",
+          postLogoutRedirectURI: "/login",
+        }),
+      ],
+    }),
+  ],
+});
