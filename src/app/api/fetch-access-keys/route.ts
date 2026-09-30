@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
   });
 
   const body = await upstream.data;
-  console.log(body);
   return NextResponse.json(body, {
     status: upstream.status,
   });
