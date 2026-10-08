@@ -1,21 +1,17 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "./lib/auth";
+import { headers } from "next/headers";
 
-export default withAuth(
-  function middleware() {
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => {
-        if (process.env.DISABLE_AUTH === "true") return true; // demo switch
-        return !!token;
-      },
-    },
+export async function middleware(request: NextRequest) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
-);
+  return NextResponse.next();
+}
 
-// this is a temp version to exclude NextAuth + static + health
 export const config = {
   matcher: [
     // protect everything EXCEPT:

@@ -5,4 +5,3 @@ import {
   useQuery,
   UseQueryOptions,
 } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
