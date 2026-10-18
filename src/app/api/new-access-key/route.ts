@@ -4,7 +4,8 @@ import { getSessionToken } from "@/lib/hooks/token";
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL!;
 
-// The response (AccessKeyCreated) is the only time the plaintext key is sent.
+// The response (AccessKeyCreated) contains the plaintext key. For view-once
+// keys (the default) it is the only time it is sent.
 export async function GET(req: NextRequest) {
   const sessionToken = await getSessionToken(req);
   if (!sessionToken)
@@ -16,6 +17,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing agentId" }, { status: 400 });
   const accessKeyName = searchParams.get("accessKeyName");
   const expiryDate = searchParams.get("expiryDate");
+  // Only an explicit "false" makes the key revealable later.
+  const viewOnce = searchParams.get("viewOnce") !== "false";
 
   try {
     const upstream = await axios.get(
@@ -25,6 +28,7 @@ export async function GET(req: NextRequest) {
           agent_id: agentId,
           name: accessKeyName,
           expiry_date: expiryDate ?? undefined,
+          view_once: viewOnce,
         },
         headers: {
           Authorization: `Bearer ${sessionToken}`,

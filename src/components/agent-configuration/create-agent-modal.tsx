@@ -1,6 +1,8 @@
 import {
   agentsClient,
   AgentUIState,
+  KNOWLEDGE_SCOPE_OPTIONS,
+  KnowledgeScope,
   LLM,
 } from "@/app/(main)/agents/agent_data";
 import {
@@ -63,6 +65,8 @@ export function AgentModal({
   const [apiKeysError, setApiKeysError] = React.useState<string | null>(null);
   const [llmKeyId, setLlmKeyId] = React.useState("");
   const [embeddingKeyId, setEmbeddingKeyId] = React.useState("");
+  const [knowledgeScope, setKnowledgeScope] =
+    React.useState<KnowledgeScope>("documents_first");
 
   React.useEffect(() => {
     if (!open) {
@@ -139,6 +143,7 @@ export function AgentModal({
     setEmbeddingModel(null);
     setLlmKeyId("");
     setEmbeddingKeyId("");
+    setKnowledgeScope("documents_first");
     setValidationMessage("");
     setShowValidationAlert(false);
   }, []);
@@ -194,7 +199,8 @@ export function AgentModal({
     embeddingModel: string,
     model: LLM | null,
     llmApiKeyId: string,
-    embeddingApiKeyId: string
+    embeddingApiKeyId: string,
+    knowledgeScope: KnowledgeScope
   ): Promise<AgentUIState | null> => {
     try {
       // Stored keys are sent by id: the backend resolves them itself.
@@ -204,7 +210,8 @@ export function AgentModal({
         embeddingModel,
         model,
         llmApiKeyId,
-        embeddingApiKeyId
+        embeddingApiKeyId,
+        knowledgeScope
       );
     } catch (e) {
       alert("Failed to create a new agent: " + e);
@@ -261,7 +268,8 @@ export function AgentModal({
         embeddingModel,
         model,
         selectedLlmKey.id,
-        selectedEmbeddingKey.id
+        selectedEmbeddingKey.id,
+        knowledgeScope
       );
       if (agent) {
         onCreate(agent);
@@ -418,6 +426,31 @@ export function AgentModal({
             <p className="text-muted-foreground text-sm">
               The embedding model is used to determine which documents from the
               knowledge base are relevant to the conversation.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="knowledge-scope">Knowledge source</Label>
+            <Select
+              value={knowledgeScope}
+              onValueChange={(value) =>
+                setKnowledgeScope(value as KnowledgeScope)
+              }
+              disabled={loading}
+            >
+              <SelectTrigger id="knowledge-scope" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {KNOWLEDGE_SCOPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-sm">
+              Whether the agent may answer questions its documents don&apos;t
+              cover.
             </p>
           </div>
           <div className={cn("flex justify-end gap-2")}>

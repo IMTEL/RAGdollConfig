@@ -10,6 +10,28 @@ export interface DocumentMetadata {
   status: "processing" | "ready" | "error";
 }
 
+/**
+ * Where the agent may take facts from: "documents_first" prefers the uploaded
+ * documents and falls back to general knowledge; "documents_only" answers only
+ * from the documents.
+ */
+export type KnowledgeScope = "documents_first" | "documents_only";
+
+export const KNOWLEDGE_SCOPE_OPTIONS: {
+  value: KnowledgeScope;
+  label: string;
+}[] = [
+  {
+    value: "documents_first",
+    label:
+      "Documents first — use general knowledge when documents don't cover it (default)",
+  },
+  {
+    value: "documents_only",
+    label: "Documents only — answer only from uploaded documents",
+  },
+];
+
 export interface AgentUIState {
   id: string;
   databaseId: string; // ID from backend
@@ -46,6 +68,7 @@ export interface AgentUIState {
   similarityThreshold: number;
   hybridSearchAlpha: number;
   contextAwareRetrieval: boolean;
+  knowledgeScope: KnowledgeScope;
 }
 
 export function defaultAgent(): AgentUIState {
@@ -80,6 +103,7 @@ export function defaultAgent(): AgentUIState {
     similarityThreshold: 0.5,
     hybridSearchAlpha: 0.75,
     contextAwareRetrieval: true,
+    knowledgeScope: "documents_first",
   };
 }
 
@@ -121,9 +145,16 @@ export interface AccessKeyPublic {
   expiry_date: string | null;
   created: string | null;
   last_use: string | null;
+  /** False for keys created to be shown again later. */
+  view_once: boolean;
+  /** True if the key can still be shown via the reveal endpoint. */
+  revealable: boolean;
 }
 
-/** Response of access-key creation: the only time the plaintext key is sent. */
+/**
+ * Response of access-key creation. For view-once keys this is the only time
+ * the plaintext key is sent; revealable keys can be shown again later.
+ */
 export interface AccessKeyCreated extends AccessKeyPublic {
   key: string;
 }
@@ -159,6 +190,7 @@ interface DatabaseAgent {
   similarity_threshold?: number;
   hybrid_search_alpha?: number;
   context_aware_retrieval?: boolean;
+  knowledge_scope?: KnowledgeScope;
 }
 
 /** Body for agent create/update: may carry a pasted provider key. */
@@ -282,6 +314,7 @@ export const agentsClient = {
           similarityThreshold: agent.similarity_threshold ?? 0.5,
           hybridSearchAlpha: agent.hybrid_search_alpha ?? 0.75,
           contextAwareRetrieval: agent.context_aware_retrieval ?? true,
+          knowledgeScope: agent.knowledge_scope ?? "documents_first",
         }) as AgentUIState
     );
   },
@@ -348,6 +381,7 @@ export const agentsClient = {
         similarity_threshold: agent.similarityThreshold,
         hybrid_search_alpha: agent.hybridSearchAlpha,
         context_aware_retrieval: agent.contextAwareRetrieval,
+        knowledge_scope: agent.knowledgeScope,
       } as AgentWriteBody;
     });
   },
@@ -358,9 +392,11 @@ export const agentsClient = {
     embedding: string,
     model?: LLM | null,
     llmApiKeyId?: string | null,
-    embeddingApiKeyId?: string | null
+    embeddingApiKeyId?: string | null,
+    knowledgeScope: KnowledgeScope = "documents_first"
   ): Promise<AgentUIState> {
     const agent = defaultAgent();
+    agent.knowledgeScope = knowledgeScope;
     agent.name = name;
     agent.description = description;
     agent.embeddingModel = embedding;

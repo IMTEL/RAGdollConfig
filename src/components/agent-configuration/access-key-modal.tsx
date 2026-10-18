@@ -7,6 +7,7 @@ import { ChevronDownIcon, Copy } from "lucide-react";
 
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
+import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { useRef, useState } from "react";
@@ -27,9 +28,11 @@ export function AccessKeyModal({
   const [name, setName] = useState<string>("");
   const [dateOpen, setDateOpen] = useState(false);
   const [date, setDate] = useState<Date | null>(null);
-  // The plaintext of the key just created. It is shown once, here: the
-  // backend only stores a hash and never returns the key again.
-  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  // Off by default: the key is then shown once, here, and the backend only
+  // stores its hash. On: the key can be shown again from the key list.
+  const [allowReveal, setAllowReveal] = useState(false);
+  // The key just created, with its plaintext.
+  const [createdKey, setCreatedKey] = useState<AccessKeyCreated | null>(null);
   const [copied, setCopied] = useState(false);
 
   const getTommorow = () => {
@@ -41,7 +44,8 @@ export function AccessKeyModal({
 
   const tryCreateAccessKey = async (
     name: string,
-    expiry_date: Date | null
+    expiry_date: Date | null,
+    viewOnce: boolean
   ): Promise<AccessKeyCreated | null> => {
     try {
       const response = await axios.get("/api/new-access-key", {
@@ -49,6 +53,7 @@ export function AccessKeyModal({
           accessKeyName: name,
           agentId,
           expiryDate: expiry_date ? expiry_date.toISOString() : undefined,
+          viewOnce,
         },
       });
       return response.data as AccessKeyCreated;
@@ -61,23 +66,25 @@ export function AccessKeyModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const created = await tryCreateAccessKey(name, date);
+    const created = await tryCreateAccessKey(name, date, !allowReveal);
     setName("");
     setDate(null);
+    setAllowReveal(false);
     if (!created) {
       onClose();
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { key, ...publicFields } = created;
     onKeyAdded(publicFields);
     setCopied(false);
-    setCreatedKey(key);
+    setCreatedKey(created);
   };
 
   const copyCreatedKey = async () => {
     if (!createdKey) return;
     try {
-      await navigator.clipboard.writeText(createdKey);
+      await navigator.clipboard.writeText(createdKey.key);
       setCopied(true);
     } catch (error) {
       console.error("Failed to copy access key:", error);
@@ -107,12 +114,14 @@ export function AccessKeyModal({
         >
           <h2 className={cn("text-lg font-semibold")}>Access key created</h2>
           <p className="text-sm">
-            Copy this key now. You won&apos;t be able to see it again.
+            {createdKey.revealable
+              ? "Copy this key now. You can also show it again later from the key list."
+              : "Copy this key now. You won't be able to see it again."}
           </p>
           <div className="flex items-center gap-2">
             <Input
               readOnly
-              value={createdKey}
+              value={createdKey.key}
               className="font-mono"
               onFocus={(e) => e.currentTarget.select()}
               aria-label="New access key"
@@ -199,6 +208,23 @@ export function AccessKeyModal({
               />
             </PopoverContent>
           </Popover>
+
+          <div className="flex items-start gap-2 px-1">
+            <Checkbox
+              id="allow-reveal"
+              checked={allowReveal}
+              onCheckedChange={(checked) => setAllowReveal(checked === true)}
+            />
+            <div className="grid gap-1">
+              <Label htmlFor="allow-reveal">
+                Allow showing this key again later
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                Off: the key is shown only once, now. On: owners and
+                collaborators can show it again from the key list.
+              </p>
+            </div>
+          </div>
 
           <div className={cn("flex justify-end gap-2")}>
             <button

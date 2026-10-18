@@ -65,6 +65,7 @@ import {
   agentsClient,
   DocumentMetadata,
   FunctionField,
+  KNOWLEDGE_SCOPE_OPTIONS,
 } from "../agent_data";
 import { useAgentActions, useAgents } from "../agent_provider";
 import AccessKeysPage from "@/components/agent-configuration/access-key-page";
@@ -1576,6 +1577,31 @@ export default function AgentConfigurationPage({
                   <p className="text-muted-foreground text-sm">
                     If disabled, only the latest message will be used for
                     retrieval.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="knowledgeScope">Knowledge Source</Label>
+                  <Select
+                    value={agent.knowledgeScope}
+                    onValueChange={(value) =>
+                      handleInputChange("knowledgeScope", value)
+                    }
+                  >
+                    <SelectTrigger id="knowledgeScope" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KNOWLEDGE_SCOPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-muted-foreground text-sm">
+                    Whether the agent may answer questions its documents
+                    don&apos;t cover. Answers from general knowledge are never
+                    presented as coming from the documents.
                   </p>
                 </div>
               </CardContent>

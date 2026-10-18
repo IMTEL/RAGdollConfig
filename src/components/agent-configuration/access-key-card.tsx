@@ -1,8 +1,10 @@
 import { AccessKeyPublic } from "@/app/(main)/agents/agent_data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import axios from "axios";
-import { Key } from "lucide-react";
+import { Copy, Key } from "lucide-react";
+import { useState } from "react";
 
 export interface AccessKeyCardProps {
   accessKey: AccessKeyPublic;
@@ -11,14 +13,19 @@ export interface AccessKeyCardProps {
 }
 
 /**
- * One access key in the list. Only metadata is shown: the key itself is
- * stored hashed and is visible once, when it is created.
+ * One access key in the list. Only metadata is shown: view-once keys are
+ * stored hashed and were visible once, when created. Revealable keys (created
+ * with "allow showing again") get a Show button that fetches the key.
  */
 export function AccessKeyCard({
   accessKey,
   onRevoke,
   agentId,
 }: AccessKeyCardProps) {
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [revealing, setRevealing] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   const getStatus = () => {
     if (!accessKey.expiry_date) return true;
     return new Date(accessKey.expiry_date).getTime() > Date.now();
@@ -33,6 +40,42 @@ export function AccessKeyCard({
     } catch (error) {
       console.error("Failed to revoke access key:", error);
       alert("An error occured while trying to revoke an access key");
+    }
+  };
+
+  const toggleReveal = async () => {
+    if (revealedKey) {
+      setRevealedKey(null);
+      setCopied(false);
+      return;
+    }
+    setRevealing(true);
+    try {
+      const response = await axios.get("/api/reveal-access-key", {
+        params: { agentId, accessKeyId: accessKey.id },
+      });
+      setRevealedKey((response.data as { key: string }).key);
+    } catch (error) {
+      const detail = axios.isAxiosError(error) && error.response?.data?.detail;
+      console.error("Failed to reveal access key:", error);
+      alert(
+        typeof detail === "string"
+          ? detail
+          : "An error occured while trying to show the access key"
+      );
+    } finally {
+      setRevealing(false);
+    }
+  };
+
+  const copyRevealedKey = async () => {
+    if (!revealedKey) return;
+    try {
+      await navigator.clipboard.writeText(revealedKey);
+      setCopied(true);
+    } catch (error) {
+      console.error("Failed to copy access key:", error);
+      alert("Could not copy the key. Select it and copy it manually.");
     }
   };
 
@@ -52,6 +95,18 @@ export function AccessKeyCard({
           </div>
         </div>
         <div className="flex gap-2">
+          {accessKey.revealable && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={revealing}
+              onClick={() => {
+                toggleReveal();
+              }}
+            >
+              {revealedKey ? "Hide" : revealing ? "Loading…" : "Show"}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -64,6 +119,28 @@ export function AccessKeyCard({
           </Button>
         </div>
       </div>
+
+      {revealedKey && (
+        <div className="flex items-center gap-2">
+          <Input
+            readOnly
+            value={revealedKey}
+            className="font-mono"
+            onFocus={(e) => e.currentTarget.select()}
+            aria-label={`Access key ${accessKey.name}`}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={copyRevealedKey}
+            aria-label="Copy access key"
+          >
+            <Copy className="mr-1 h-4 w-4" />
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
+      )}
 
       <div className="text-muted-foreground flex items-center gap-6 text-sm">
         <div>
