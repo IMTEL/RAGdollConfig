@@ -22,6 +22,8 @@ interface SelectEmbeddingProps {
   allowedProviders?: string[];
   provider?: string | null;
   apiKey?: string | null;
+  // Id of a stored key; used instead of apiKey when set.
+  apiKeyId?: string | null;
   isApiKeyLoading?: boolean;
   apiKeyError?: string | null;
   disabled?: boolean;
@@ -34,12 +36,16 @@ export function SelectEmbedding({
   allowedProviders,
   provider,
   apiKey,
+  apiKeyId,
   isApiKeyLoading,
   apiKeyError,
   disabled,
 }: SelectEmbeddingProps) {
   const normalizedProvider = provider?.toLowerCase().trim() ?? null;
-  const shouldFetch = Boolean(normalizedProvider && apiKey && !isApiKeyLoading);
+  const hasCredential = Boolean(apiKeyId || apiKey);
+  const shouldFetch = Boolean(
+    normalizedProvider && hasCredential && !isApiKeyLoading
+  );
 
   // Use TanStack Query to fetch embedding models
   const {
@@ -48,12 +54,14 @@ export function SelectEmbedding({
     isError,
     error,
   } = useQuery({
-    queryKey: ["embeddingModels", normalizedProvider, apiKey],
+    queryKey: ["embeddingModels", normalizedProvider, apiKeyId, apiKey],
     queryFn: async (): Promise<string[]> => {
-      const response = await axios.post("/api/get-embedding-models", {
-        provider: normalizedProvider,
-        apiKey,
-      });
+      const response = await axios.post(
+        "/api/get-embedding-models",
+        apiKeyId
+          ? { provider: normalizedProvider, apiKeyId }
+          : { provider: normalizedProvider, apiKey }
+      );
 
       const data = response.data;
       if (!Array.isArray(data)) {
@@ -116,7 +124,7 @@ export function SelectEmbedding({
   const selectDisabled =
     disabled ||
     !provider ||
-    !apiKey ||
+    !hasCredential ||
     isApiKeyLoading ||
     isLoading ||
     !!fetchError ||
@@ -125,7 +133,7 @@ export function SelectEmbedding({
   const placeholderText = (() => {
     if (isApiKeyLoading) return "Loading API key...";
     if (apiKeyError) return apiKeyError;
-    if (!provider || !apiKey) return "Select an API key first";
+    if (!provider || !hasCredential) return "Select an API key first";
     if (isLoading) return "Loading embedding models...";
     if (fetchError) return fetchError;
     if ((filteredEmbeddings?.length ?? 0) === 0)

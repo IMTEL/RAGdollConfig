@@ -1,11 +1,10 @@
 "use client";
 
-import { AgentUIState } from "@/app/(main)/agents/agent_data";
+import { AccessKeyCreated, AgentUIState } from "@/app/(main)/agents/agent_data";
 import axios from "axios";
 import { Bot } from "lucide-react";
 import { ComponentProps, ReactNode } from "react";
 import { Button } from "../ui/button";
-import { AccessKey } from "./access-key-card";
 
 const CHAT_WEBSITE_URL =
   process.env.NEXT_PUBLIC_CHAT_WEBSITE_URL || "http://localhost:3001";
@@ -29,7 +28,8 @@ export function TestAgent({
   icon,
   ariaLabel,
 }: TestAgentProps) {
-  const getChatAccessKey = async (): Promise<AccessKey> => {
+  // Stored keys can't be read back, so every chat gets a freshly minted key.
+  const getChatAccessKey = async (): Promise<AccessKeyCreated> => {
     const response = await axios.get("/api/chat-access-key", {
       params: { agentId: agent.id },
     });
@@ -39,7 +39,7 @@ export function TestAgent({
       throw new Error("Failed to get chat access key");
     }
 
-    return response.data as AccessKey;
+    return response.data as AccessKeyCreated;
   };
 
   const handleTestAgent = async () => {

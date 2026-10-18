@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionToken } from "@/lib/hooks/token";
 import axios from "axios";
+import { getSessionToken } from "@/lib/hooks/token";
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL!;
 
@@ -11,18 +11,33 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const agentId = searchParams.get("agentId");
+  if (!agentId)
+    return NextResponse.json({ error: "Missing agentId" }, { status: 400 });
   const accessKeyId = searchParams.get("accessKeyId");
+  if (!accessKeyId)
+    return NextResponse.json({ error: "Missing accessKeyId" }, { status: 400 });
 
-  const upstream = await axios.get(`${BACKEND_API_URL}/revoke-accesskey`, {
-    params: { access_key_id: accessKeyId, agent_id: agentId },
-    headers: {
-      Authorization: `Bearer ${sessionToken}`,
-      Accept: "application/json",
-    },
-  });
-
-  const body = await upstream.data;
-  return NextResponse.json(body, {
-    status: upstream.status,
-  });
+  try {
+    const upstream = await axios.delete(
+      `${BACKEND_API_URL}/agents/${encodeURIComponent(agentId)}/accesskeys/${encodeURIComponent(accessKeyId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+          Accept: "application/json",
+        },
+      }
+    );
+    return NextResponse.json(upstream.data, { status: upstream.status });
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    }
+    console.error("Failed to revoke access key:", error);
+    return NextResponse.json(
+      { error: "Failed to revoke access key" },
+      { status: 500 }
+    );
+  }
 }

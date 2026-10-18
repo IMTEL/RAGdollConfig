@@ -32,6 +32,8 @@ interface SelectAgentProps {
   allowedProviders?: string[];
   provider?: string | null;
   apiKey?: string | null;
+  // Id of a stored key; used instead of apiKey when set.
+  apiKeyId?: string | null;
   isApiKeyLoading?: boolean;
   apiKeyError?: string | null;
   disabled?: boolean;
@@ -43,16 +45,20 @@ export function SelectModel({
   allowedProviders,
   provider,
   apiKey,
+  apiKeyId,
   isApiKeyLoading,
   apiKeyError,
   disabled,
 }: SelectAgentProps) {
+  const credential = apiKeyId ? `id:${apiKeyId}` : apiKey ? `key:${apiKey}` : null;
   const [showGDPRWarning, setShowGDPRWarning] = useState<boolean>(false);
   const [pendingModel, setPendingModel] = useState<LLM | null>(null);
   const [models, setModels] = useState<LLM[] | null>(null);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const lastRequest = useRef<{ provider: string; apiKey: string } | null>(null);
+  const lastRequest = useRef<{ provider: string; credential: string } | null>(
+    null
+  );
 
   const normalizedAllowedProviders = useMemo(() => {
     if (!allowedProviders?.length) return null;
@@ -60,7 +66,7 @@ export function SelectModel({
   }, [allowedProviders]);
 
   useEffect(() => {
-    if (!provider || !apiKey) {
+    if (!provider || !credential) {
       setModels(null);
       setFetchError(null);
       setIsLoadingModels(false);
@@ -69,7 +75,7 @@ export function SelectModel({
     }
 
     const normalizedProvider = provider.toLowerCase().trim();
-    const requestSignature = { provider: normalizedProvider, apiKey };
+    const requestSignature = { provider: normalizedProvider, credential };
     lastRequest.current = requestSignature;
     let cancelled = false;
 
@@ -77,10 +83,12 @@ export function SelectModel({
       setIsLoadingModels(true);
       setFetchError(null);
       try {
-        const response = await axios.post("/api/get-models", {
-          provider: normalizedProvider,
-          apiKey,
-        });
+        const response = await axios.post(
+          "/api/get-models",
+          apiKeyId
+            ? { provider: normalizedProvider, apiKeyId }
+            : { provider: normalizedProvider, apiKey }
+        );
         if (cancelled) return;
 
         const data = response.data;
@@ -89,7 +97,7 @@ export function SelectModel({
         }
         if (
           lastRequest.current?.provider === normalizedProvider &&
-          lastRequest.current?.apiKey === apiKey
+          lastRequest.current?.credential === credential
         ) {
           setModels(data as LLM[]);
         }
@@ -118,7 +126,9 @@ export function SelectModel({
     return () => {
       cancelled = true;
     };
-  }, [apiKey, onChange, provider, selectedModel]);
+    // apiKey/apiKeyId are folded into credential.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [credential, onChange, provider, selectedModel]);
 
   const filteredModels = useMemo(() => {
     if (!models) return null;
@@ -168,7 +178,7 @@ export function SelectModel({
   const selectDisabled =
     disabled ||
     !provider ||
-    !apiKey ||
+    !credential ||
     isApiKeyLoading ||
     filteredModels === null ||
     filteredModels.length === 0 ||
@@ -183,7 +193,7 @@ export function SelectModel({
   const placeholderText = (() => {
     if (isApiKeyLoading) return "Loading API key...";
     if (apiKeyError) return apiKeyError;
-    if (!provider || !apiKey) return "Select an API key first";
+    if (!provider || !credential) return "Select an API key first";
     if (isLoadingModels) return "Loading models...";
     if (fetchError) return fetchError;
     if (filteredModels !== null && filteredModels.length === 0)

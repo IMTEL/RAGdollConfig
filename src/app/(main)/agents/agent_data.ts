@@ -10,6 +10,28 @@ export interface DocumentMetadata {
   status: "processing" | "ready" | "error";
 }
 
+/**
+ * Where the agent may take facts from: "documents_first" prefers the uploaded
+ * documents and falls back to general knowledge; "documents_only" answers only
+ * from the documents.
+ */
+export type KnowledgeScope = "documents_first" | "documents_only";
+
+export const KNOWLEDGE_SCOPE_OPTIONS: {
+  value: KnowledgeScope;
+  label: string;
+}[] = [
+  {
+    value: "documents_first",
+    label:
+      "Documents first — use general knowledge when documents don't cover it (default)",
+  },
+  {
+    value: "documents_only",
+    label: "Documents only — answer only from uploaded documents",
+  },
+];
+
 export interface AgentUIState {
   id: string;
   databaseId: string; // ID from backend
@@ -20,8 +42,18 @@ export interface AgentUIState {
   maxTokens: number;
   model: LLM | null;
   embeddingModel: string;
+  // Provider keys. The API never returns a key, so these hold only what the
+  // user entered in this session: a pasted key (llmApiKey) or a stored key
+  // picked by id (llmApiKeyId). Both empty on save keeps the stored key.
   llmApiKey: string | null;
   embeddingApiKey: string | null;
+  llmApiKeyId: string | null;
+  embeddingApiKeyId: string | null;
+  // Read-only state from the backend.
+  hasLlmApiKey: boolean;
+  hasEmbeddingApiKey: boolean;
+  llmApiKeyInvalid: boolean;
+  embeddingApiKeyInvalid: boolean;
   status: "active" | "inactive";
   enableMemory: boolean;
   enableWebSearch: boolean;
@@ -36,6 +68,7 @@ export interface AgentUIState {
   similarityThreshold: number;
   hybridSearchAlpha: number;
   contextAwareRetrieval: boolean;
+  knowledgeScope: KnowledgeScope;
 }
 
 export function defaultAgent(): AgentUIState {
@@ -51,6 +84,12 @@ export function defaultAgent(): AgentUIState {
     embeddingModel: "",
     llmApiKey: null,
     embeddingApiKey: null,
+    llmApiKeyId: null,
+    embeddingApiKeyId: null,
+    hasLlmApiKey: false,
+    hasEmbeddingApiKey: false,
+    llmApiKeyInvalid: false,
+    embeddingApiKeyInvalid: false,
     status: "active",
     enableMemory: false,
     enableWebSearch: false,
@@ -64,6 +103,7 @@ export function defaultAgent(): AgentUIState {
     similarityThreshold: 0.5,
     hybridSearchAlpha: 0.75,
     contextAwareRetrieval: true,
+    knowledgeScope: "documents_first",
   };
 }
 
@@ -98,6 +138,28 @@ export interface LLM {
   description: string;
 }
 
+export interface AccessKeyPublic {
+  id: string;
+  name: string;
+  prefix: string | null;
+  expiry_date: string | null;
+  created: string | null;
+  last_use: string | null;
+  /** False for keys created to be shown again later. */
+  view_once: boolean;
+  /** True if the key can still be shown via the reveal endpoint. */
+  revealable: boolean;
+}
+
+/**
+ * Response of access-key creation. For view-once keys this is the only time
+ * the plaintext key is sent; revealable keys can be shown again later.
+ */
+export interface AccessKeyCreated extends AccessKeyPublic {
+  key: string;
+}
+
+/** Agent as returned by the backend (AgentPublic): never contains a secret. */
 interface DatabaseAgent {
   id: string; // optional for creation
   name: string;
@@ -107,11 +169,15 @@ interface DatabaseAgent {
   llm_model: string; // TODO: Change to LLM model
   llm_temperature: number;
   llm_max_tokens: number;
-  llm_api_key: string | null;
-  access_key?: unknown[]; // managed by backend access-key endpoints
+  access_key?: AccessKeyPublic[]; // managed by backend access-key endpoints
   retrieval_method?: string;
   embedding_model?: string; // optional for now
-  embedding_api_key: string | null;
+  llm_api_key_id?: string | null;
+  embedding_api_key_id?: string | null;
+  has_llm_api_key?: boolean;
+  has_embedding_api_key?: boolean;
+  llm_api_key_invalid?: boolean;
+  embedding_api_key_invalid?: boolean;
   status?: "active" | "inactive";
   response_format: "text" | "structured";
   enableMemory: boolean; // not in backend
@@ -124,7 +190,21 @@ interface DatabaseAgent {
   similarity_threshold?: number;
   hybrid_search_alpha?: number;
   context_aware_retrieval?: boolean;
+  knowledge_scope?: KnowledgeScope;
 }
+
+/** Body for agent create/update: may carry a pasted provider key. */
+type AgentWriteBody = Omit<
+  DatabaseAgent,
+  | "access_key"
+  | "has_llm_api_key"
+  | "has_embedding_api_key"
+  | "llm_api_key_invalid"
+  | "embedding_api_key_invalid"
+> & {
+  llm_api_key: string;
+  embedding_api_key: string;
+};
 
 interface DatabaseRole {
   name: string;
@@ -201,8 +281,14 @@ export const agentsClient = {
           enableMemory: agent.enableMemory,
           enableWebSearch: agent.enableWebSearch,
           embeddingModel: agent.embedding_model,
-          llmApiKey: agent.llm_api_key ?? null,
-          embeddingApiKey: agent.embedding_api_key ?? null,
+          llmApiKey: null,
+          embeddingApiKey: null,
+          llmApiKeyId: agent.llm_api_key_id ?? null,
+          embeddingApiKeyId: agent.embedding_api_key_id ?? null,
+          hasLlmApiKey: agent.has_llm_api_key ?? false,
+          hasEmbeddingApiKey: agent.has_embedding_api_key ?? false,
+          llmApiKeyInvalid: agent.llm_api_key_invalid ?? false,
+          embeddingApiKeyInvalid: agent.embedding_api_key_invalid ?? false,
           responseFormat: agent.response_format,
           documents: null,
           roles: agent.roles.map((role, index) => ({
@@ -228,20 +314,21 @@ export const agentsClient = {
           similarityThreshold: agent.similarity_threshold ?? 0.5,
           hybridSearchAlpha: agent.hybrid_search_alpha ?? 0.75,
           contextAwareRetrieval: agent.context_aware_retrieval ?? true,
+          knowledgeScope: agent.knowledge_scope ?? "documents_first",
         }) as AgentUIState
     );
   },
 
-  convertToDB(agents: AgentUIState[]): DatabaseAgent[] {
+  convertToDB(agents: AgentUIState[]): AgentWriteBody[] {
     return agents.map((agent) => {
       const llmApiKey = agent.llmApiKey?.trim();
       const embeddingApiKey = agent.embeddingApiKey?.trim();
 
-      if (!llmApiKey && !agent.databaseId) {
+      if (!llmApiKey && !agent.llmApiKeyId && !agent.databaseId) {
         throw new Error("LLM API key is required when saving an agent");
       }
 
-      if (!embeddingApiKey && !agent.databaseId) {
+      if (!embeddingApiKey && !agent.embeddingApiKeyId && !agent.databaseId) {
         throw new Error("Embedding API key is required when saving an agent");
       }
 
@@ -277,8 +364,12 @@ export const agentsClient = {
         llm_model: agent.model?.name ?? "",
         llm_temperature: agent.temperature,
         llm_max_tokens: agent.maxTokens,
+        // A pasted key wins over a stored-key id; an empty key and no id
+        // keeps whatever the backend has stored.
         llm_api_key: llmApiKey ?? "",
         embedding_api_key: embeddingApiKey ?? "",
+        llm_api_key_id: llmApiKey ? null : agent.llmApiKeyId,
+        embedding_api_key_id: embeddingApiKey ? null : agent.embeddingApiKeyId,
         retrieval_method: "semantic",
         embedding_model: agent.embeddingModel,
         status: agent.status,
@@ -290,7 +381,8 @@ export const agentsClient = {
         similarity_threshold: agent.similarityThreshold,
         hybrid_search_alpha: agent.hybridSearchAlpha,
         context_aware_retrieval: agent.contextAwareRetrieval,
-      } as DatabaseAgent;
+        knowledge_scope: agent.knowledgeScope,
+      } as AgentWriteBody;
     });
   },
 
@@ -299,16 +391,18 @@ export const agentsClient = {
     description: string,
     embedding: string,
     model?: LLM | null,
-    llmApiKey?: string | null,
-    embeddingApiKey?: string | null
+    llmApiKeyId?: string | null,
+    embeddingApiKeyId?: string | null,
+    knowledgeScope: KnowledgeScope = "documents_first"
   ): Promise<AgentUIState> {
     const agent = defaultAgent();
+    agent.knowledgeScope = knowledgeScope;
     agent.name = name;
     agent.description = description;
     agent.embeddingModel = embedding;
     agent.model = model || null;
-    agent.llmApiKey = llmApiKey ?? null;
-    agent.embeddingApiKey = embeddingApiKey ?? null;
+    agent.llmApiKeyId = llmApiKeyId ?? null;
+    agent.embeddingApiKeyId = embeddingApiKeyId ?? null;
     // Create a default role with the same name as the agent
     agent.roles = [
       {
@@ -331,7 +425,11 @@ export const agentsClient = {
       body: JSON.stringify(this.convertToDB([agent])[0]),
     });
     if (!response.ok) {
-      throw new Error(`Failed to update agent: ${response.status}`);
+      // e.g. 403 when a collaborator picks a stored key: only the owner may.
+      const body = await response.json().catch(() => null);
+      const detail =
+        typeof body?.detail === "string" ? `: ${body.detail}` : "";
+      throw new Error(`Failed to save agent (${response.status})${detail}`);
     }
     return await this.convertFromDB([await response.json()])[0];
   },

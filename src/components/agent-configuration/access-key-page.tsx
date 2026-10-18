@@ -1,8 +1,6 @@
 "use client";
-import {
-  AccessKey,
-  AccessKeyCard,
-} from "@/components/agent-configuration/access-key-card";
+import { AccessKeyPublic } from "@/app/(main)/agents/agent_data";
+import { AccessKeyCard } from "@/components/agent-configuration/access-key-card";
 import { AccessKeyModal } from "@/components/agent-configuration/access-key-modal";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
@@ -15,41 +13,29 @@ export interface AccessKeyPageProps {
 
 export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
   const [showAccessKeyModal, setShowAccessKeyModal] = useState<boolean>(false);
-  const [accessKeys, setAccessKeys] = useState<AccessKey[]>([]);
+  const [accessKeys, setAccessKeys] = useState<AccessKeyPublic[]>([]);
   // Todo : to be fixed in a larger refactor by mathias, hardcoded for now
 
   useEffect(() => {
     const getAccessKeys = async () => {
-      const response = await axios.get("/api/fetch-access-keys", {
-        params: { agentId },
-      });
-
-      if (response.status !== 200) {
-        console.error(
-          "Could not fetch  access-keys : " + response.status.toString()
-        );
-        return;
-      }
-
       try {
-        const accessKey = (await response.data) as AccessKey[];
-        setAccessKeys(accessKey);
-      } catch {
-        console.error("Failed to fetch access key:", response.statusText);
+        const response = await axios.get("/api/fetch-access-keys", {
+          params: { agentId },
+        });
+        setAccessKeys(response.data as AccessKeyPublic[]);
+      } catch (error) {
+        console.error("Could not fetch access keys:", error);
       }
     };
     getAccessKeys();
   }, [agentId]);
 
-  const onRevoke = (accessKey: AccessKey) => {
-    const newAccessKeys: AccessKey[] = accessKeys.filter((ak: AccessKey) => {
-      return ak !== accessKey;
-    });
-    setAccessKeys(newAccessKeys);
+  const onRevoke = (accessKey: AccessKeyPublic) => {
+    setAccessKeys((prev) => prev.filter((ak) => ak.id !== accessKey.id));
   };
 
-  const onKeyAdded = (accessKey: AccessKey) => {
-    setAccessKeys([accessKey, ...accessKeys]);
+  const onKeyAdded = (accessKey: AccessKeyPublic) => {
+    setAccessKeys((prev) => [accessKey, ...prev]);
   };
 
   return (
@@ -76,7 +62,7 @@ export default function AccessKeysPage({ agentId }: AccessKeyPageProps) {
           <AccessKeyCard
             key={accessKey.id}
             accessKey={accessKey}
-            onRevoke={(accessKey: AccessKey) => {
+            onRevoke={(accessKey: AccessKeyPublic) => {
               onRevoke(accessKey);
             }}
             agentId={agentId}
