@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionToken } from "@/lib/hooks/token";
 import axios from "axios";
+import { getSessionToken } from "@/lib/hooks/token";
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL!;
 
+// The response (AccessKeyCreated) is the only time the plaintext key is sent.
 export async function GET(req: NextRequest) {
   const sessionToken = await getSessionToken(req);
   if (!sessionToken)
@@ -11,25 +12,37 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const agentId = searchParams.get("agentId");
+  if (!agentId)
+    return NextResponse.json({ error: "Missing agentId" }, { status: 400 });
   const accessKeyName = searchParams.get("accessKeyName");
   const expiryDate = searchParams.get("expiryDate");
-  const viewOnce = searchParams.get("viewOnce");
 
-  const upstream = await axios.get(`${BACKEND_API_URL}/new-accesskey`, {
-    params: {
-      agent_id: agentId,
-      name: accessKeyName,
-      expiry_date: expiryDate,
-      view_once: viewOnce ?? undefined,
-    },
-    headers: {
-      Authorization: `Bearer ${sessionToken}`,
-      Accept: "application/json",
-    },
-  });
-
-  const body = await upstream.data;
-  return NextResponse.json(body, {
-    status: upstream.status,
-  });
+  try {
+    const upstream = await axios.get(
+      `${BACKEND_API_URL}/agents/new-accesskey`,
+      {
+        params: {
+          agent_id: agentId,
+          name: accessKeyName,
+          expiry_date: expiryDate ?? undefined,
+        },
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+          Accept: "application/json",
+        },
+      }
+    );
+    return NextResponse.json(upstream.data, { status: upstream.status });
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    }
+    console.error("Failed to create access key:", error);
+    return NextResponse.json(
+      { error: "Failed to create access key" },
+      { status: 500 }
+    );
+  }
 }

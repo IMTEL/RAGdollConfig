@@ -1,11 +1,14 @@
+import {
+  AccessKeyCreated,
+  AccessKeyPublic,
+} from "@/app/(main)/agents/agent_data";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, Copy } from "lucide-react";
 
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { AccessKey } from "./access-key-card";
 import { useRef, useState } from "react";
 import { Label } from "../ui/label";
 import axios from "axios";
@@ -18,13 +21,16 @@ export function AccessKeyModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onKeyAdded: (accessKey: AccessKey) => void;
+  onKeyAdded: (accessKey: AccessKeyPublic) => void;
   agentId: string;
 }) {
   const [name, setName] = useState<string>("");
   const [dateOpen, setDateOpen] = useState(false);
   const [date, setDate] = useState<Date | null>(null);
-  const [viewOnce, setViewOnce] = useState<boolean>(true);
+  // The plaintext of the key just created. It is shown once, here: the
+  // backend only stores a hash and never returns the key again.
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const getTommorow = () => {
     const today = new Date();
@@ -35,30 +41,19 @@ export function AccessKeyModal({
 
   const tryCreateAccessKey = async (
     name: string,
-    expiry_date: Date | null,
-    view_once: boolean
-  ): Promise<AccessKey | null> => {
-    const response = await axios.get("/api/new-access-key", {
-      params: {
-        accessKeyName: name,
-        agentId,
-        expiryDate: expiry_date ? expiry_date.toISOString() : undefined,
-        viewOnce: view_once,
-      },
-    });
-
-    if (response.status !== 200) {
-      // TODO : Feedback to user
-      console.error("Failed to create access key:", response.statusText);
-      alert("Failed to create access key:: " + response.statusText);
-      return null;
-    }
-
+    expiry_date: Date | null
+  ): Promise<AccessKeyCreated | null> => {
     try {
-      const accessKey = (await response.data) as AccessKey;
-      return accessKey;
-    } catch {
-      console.error("Failed to create access key:", response.statusText);
+      const response = await axios.get("/api/new-access-key", {
+        params: {
+          accessKeyName: name,
+          agentId,
+          expiryDate: expiry_date ? expiry_date.toISOString() : undefined,
+        },
+      });
+      return response.data as AccessKeyCreated;
+    } catch (error) {
+      console.error("Failed to create access key:", error);
       alert("An error occured while trying to create an access key");
       return null;
     }
@@ -66,19 +61,82 @@ export function AccessKeyModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const accesskey: AccessKey | null = await tryCreateAccessKey(
-      name,
-      date,
-      viewOnce
-    );
+    const created = await tryCreateAccessKey(name, date);
     setName("");
     setDate(null);
-    setViewOnce(true);
-    if (accesskey) onKeyAdded(accesskey);
+    if (!created) {
+      onClose();
+      return;
+    }
+    const { key, ...publicFields } = created;
+    onKeyAdded(publicFields);
+    setCopied(false);
+    setCreatedKey(key);
+  };
+
+  const copyCreatedKey = async () => {
+    if (!createdKey) return;
+    try {
+      await navigator.clipboard.writeText(createdKey);
+      setCopied(true);
+    } catch (error) {
+      console.error("Failed to copy access key:", error);
+      alert("Could not copy the key. Select it and copy it manually.");
+    }
+  };
+
+  const closeCreatedKey = () => {
+    setCreatedKey(null);
+    setCopied(false);
     onClose();
   };
 
   if (!open) return null;
+
+  if (createdKey) {
+    return (
+      <div
+        className={cn(
+          "fixed top-0 right-0 bottom-0 left-0 z-50 flex min-h-screen items-center justify-center bg-black/40"
+        )}
+      >
+        <div
+          className={cn(
+            "bg-background w-full max-w-md space-y-4 rounded-lg p-6 shadow-lg"
+          )}
+        >
+          <h2 className={cn("text-lg font-semibold")}>Access key created</h2>
+          <p className="text-sm">
+            Copy this key now. You won&apos;t be able to see it again.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              readOnly
+              value={createdKey}
+              className="font-mono"
+              onFocus={(e) => e.currentTarget.select()}
+              aria-label="New access key"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={copyCreatedKey}
+              aria-label="Copy access key"
+            >
+              <Copy className="mr-1 h-4 w-4" />
+              {copied ? "Copied" : "Copy"}
+            </Button>
+          </div>
+          <div className={cn("flex justify-end")}>
+            <Button type="button" onClick={closeCreatedKey}>
+              Done
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -141,42 +199,6 @@ export function AccessKeyModal({
               />
             </PopoverContent>
           </Popover>
-
-          <div className="space-y-3 rounded-md border p-3">
-            <Label className="text-sm font-medium">Key visibility</Label>
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="radio"
-                name="key-visibility"
-                checked={viewOnce}
-                onChange={() => setViewOnce(true)}
-                className="mt-1"
-              />
-              <span>
-                <span className="block text-sm font-medium">View once</span>
-                <span className="text-muted-foreground block text-sm">
-                  Show the key only when it is created.
-                </span>
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="radio"
-                name="key-visibility"
-                checked={!viewOnce}
-                onChange={() => setViewOnce(false)}
-                className="mt-1"
-              />
-              <span>
-                <span className="block text-sm font-medium">
-                  View anytime
-                </span>
-                <span className="text-muted-foreground block text-sm">
-                  Allow this key to be revealed again from the access-key list.
-                </span>
-              </span>
-            </label>
-          </div>
 
           <div className={cn("flex justify-end gap-2")}>
             <button

@@ -1,64 +1,39 @@
+import { AccessKeyPublic } from "@/app/(main)/agents/agent_data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
-import { Copy, Eye, Key } from "lucide-react";
-import { useState } from "react";
-
-export interface AccessKey {
-  id: string | null;
-  key: string | null;
-  name: string | null;
-  expiry_date: Date | null;
-  created: Date | null;
-  last_use: Date | null;
-  view_once?: boolean;
-}
+import { Key } from "lucide-react";
 
 export interface AccessKeyCardProps {
-  accessKey: AccessKey;
-  onRevoke(accessKey: AccessKey): void;
+  accessKey: AccessKeyPublic;
+  onRevoke(accessKey: AccessKeyPublic): void;
   agentId: string;
 }
 
+/**
+ * One access key in the list. Only metadata is shown: the key itself is
+ * stored hashed and is visible once, when it is created.
+ */
 export function AccessKeyCard({
   accessKey,
   onRevoke,
   agentId,
 }: AccessKeyCardProps) {
-  const [displayAccessKey, setDisplayAccessKey] = useState<boolean>(false);
-
   const getStatus = () => {
     if (!accessKey.expiry_date) return true;
     return new Date(accessKey.expiry_date).getTime() > Date.now();
   };
 
   const tryRevokeKey = async () => {
-    if (!accessKey.id) {
-      console.error("Id of access key is null");
-      return;
-    }
-
-    const response = await axios.get("/api/revoke-access-key", {
-      params: { agentId, accessKeyId: accessKey.id },
-    });
-
-    if (response.status !== 200) {
-      console.log(
-        "An error occured when trying to revoke acces key: " +
-          response.status.toString()
-      );
+    try {
+      await axios.get("/api/revoke-access-key", {
+        params: { agentId, accessKeyId: accessKey.id },
+      });
+      onRevoke(accessKey);
+    } catch (error) {
+      console.error("Failed to revoke access key:", error);
       alert("An error occured while trying to revoke an access key");
     }
-    onRevoke(accessKey);
-  };
-
-  const copyKey = () => {
-    if (accessKey.key == null) {
-      console.error("access key does not contain a key!");
-      return;
-    }
-    navigator.clipboard.writeText(accessKey.key);
-    alert("Accesskey copied");
   };
 
   return (
@@ -71,42 +46,12 @@ export function AccessKeyCard({
             <Badge variant={getStatus() ? "default" : "secondary"}>
               {getStatus() ? "Active" : "Expired"}
             </Badge>
-            <Badge variant="outline">
-              {accessKey.view_once === false ? "View anytime" : "View once"}
-            </Badge>
           </div>
-          <div className="flex items-center gap-2 font-mono text-sm">
-            {accessKey.key !== null ? (
-              <div>
-                <span className="text-muted-foreground">
-                  {displayAccessKey ? accessKey.key : "*************"}
-                </span>
-                <Button
-                  onClick={copyKey}
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
-                <Button
-                  onClick={() => setDisplayAccessKey(!displayAccessKey)}
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                >
-                  <Eye className="h-3 w-3" />
-                </Button>
-              </div>
-            ) : (
-              "Key hidden"
-            )}
+          <div className="text-muted-foreground font-mono text-sm">
+            {accessKey.prefix ? `${accessKey.prefix}…` : "Prefix unavailable"}
           </div>
         </div>
         <div className="flex gap-2">
-          {/*<Button variant="outline" size="sm">
-                        Edit
-                    </Button>*/}
           <Button
             variant="outline"
             size="sm"
@@ -123,21 +68,20 @@ export function AccessKeyCard({
       <div className="text-muted-foreground flex items-center gap-6 text-sm">
         <div>
           Expiry date:{" "}
-          {accessKey?.expiry_date
+          {accessKey.expiry_date
             ? new Date(accessKey.expiry_date).toDateString()
             : "None"}
         </div>
         <div>
           Created:{" "}
-          {accessKey?.created ? new Date(accessKey.created).toDateString() : ""}
+          {accessKey.created ? new Date(accessKey.created).toDateString() : ""}
         </div>
         <div>
           Last used:{" "}
-          {accessKey?.last_use
+          {accessKey.last_use
             ? new Date(accessKey.last_use).toDateString()
             : "Never used"}
         </div>
-        <div className="flex gap-1"></div>
       </div>
     </div>
   );

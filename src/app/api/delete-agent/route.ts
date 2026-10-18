@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionToken } from "@/lib/hooks/token";
 import axios from "axios";
+import { getSessionToken } from "@/lib/hooks/token";
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL;
+const BACKEND_API_URL = process.env.BACKEND_API_URL!;
 
 export async function GET(req: NextRequest) {
   const sessionToken = await getSessionToken(req);
@@ -11,15 +11,30 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const agentId = searchParams.get("agentId");
+  if (!agentId)
+    return NextResponse.json({ error: "Missing agentId" }, { status: 400 });
 
-  const upstream = await axios.get(`${BACKEND_API_URL}/delete-agent`, {
-    params: { agent_id: agentId },
-    headers: {
-      Authorization: `Bearer ${sessionToken}`
-    },
-  });
-
-  return new NextResponse(null, {
-    status: upstream.status
-  });
+  try {
+    const upstream = await axios.delete(
+      `${BACKEND_API_URL}/agents/${encodeURIComponent(agentId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+          Accept: "application/json",
+        },
+      }
+    );
+    return NextResponse.json(upstream.data, { status: upstream.status });
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    }
+    console.error("Failed to delete agent:", error);
+    return NextResponse.json(
+      { error: "Failed to delete agent" },
+      { status: 500 }
+    );
+  }
 }

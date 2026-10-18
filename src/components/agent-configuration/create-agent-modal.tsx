@@ -63,21 +63,6 @@ export function AgentModal({
   const [apiKeysError, setApiKeysError] = React.useState<string | null>(null);
   const [llmKeyId, setLlmKeyId] = React.useState("");
   const [embeddingKeyId, setEmbeddingKeyId] = React.useState("");
-  const [llmApiKeyValue, setLlmApiKeyValue] = React.useState<string | null>(
-    null
-  );
-  const [embeddingApiKeyValue, setEmbeddingApiKeyValue] = React.useState<
-    string | null
-  >(null);
-  const [llmKeyError, setLlmKeyError] = React.useState<string | null>(null);
-  const [embeddingKeyError, setEmbeddingKeyError] = React.useState<
-    string | null
-  >(null);
-  const [isFetchingLlmKey, setIsFetchingLlmKey] = React.useState(false);
-  const [isFetchingEmbeddingKey, setIsFetchingEmbeddingKey] =
-    React.useState(false);
-  const llmKeyIdRef = React.useRef("");
-  const embeddingKeyIdRef = React.useRef("");
 
   React.useEffect(() => {
     if (!open) {
@@ -146,71 +131,6 @@ export function AgentModal({
     [embeddingCompatibleKeys, embeddingKeyId]
   );
 
-  const fetchApiKeySecret = React.useCallback(
-    async (keyId: string, target: "llm" | "embedding") => {
-      if (!keyId) {
-        return;
-      }
-
-      const isLlm = target === "llm";
-
-      if (isLlm) {
-        setIsFetchingLlmKey(true);
-        setLlmKeyError(null);
-        setLlmApiKeyValue(null);
-      } else {
-        setIsFetchingEmbeddingKey(true);
-        setEmbeddingKeyError(null);
-        setEmbeddingApiKeyValue(null);
-      }
-
-      try {
-        const response = await fetch(`/api/get-api-keys/${keyId}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch API key (${response.status})`);
-        }
-        const text = await response.text();
-        if (!text) {
-          throw new Error('Empty response from server');
-        }
-        const data = JSON.parse(text);
-        const rawKey = data?.raw_key as string | undefined;
-        if (!rawKey) {
-          throw new Error("API key secret missing in response");
-        }
-
-        const isCurrentSelection = isLlm
-          ? llmKeyIdRef.current === keyId
-          : embeddingKeyIdRef.current === keyId;
-
-        if (!isCurrentSelection) {
-          return;
-        }
-
-        if (isLlm) {
-          setLlmApiKeyValue(rawKey);
-        } else {
-          setEmbeddingApiKeyValue(rawKey);
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to load API key";
-        if (isLlm) {
-          setLlmKeyError(message);
-        } else {
-          setEmbeddingKeyError(message);
-        }
-      } finally {
-        if (isLlm) {
-          setIsFetchingLlmKey(false);
-        } else {
-          setIsFetchingEmbeddingKey(false);
-        }
-      }
-    },
-    []
-  );
-
   const resetForm = React.useCallback(() => {
     setIcon("");
     setName("");
@@ -218,28 +138,17 @@ export function AgentModal({
     setModel(null);
     setEmbeddingModel(null);
     setLlmKeyId("");
-    llmKeyIdRef.current = "";
     setEmbeddingKeyId("");
-    embeddingKeyIdRef.current = "";
-    setLlmApiKeyValue(null);
-    setEmbeddingApiKeyValue(null);
-    setLlmKeyError(null);
-    setEmbeddingKeyError(null);
     setValidationMessage("");
     setShowValidationAlert(false);
-    setIsFetchingLlmKey(false);
-    setIsFetchingEmbeddingKey(false);
   }, []);
 
   const handleLlmKeyChange = React.useCallback(
     (keyId: string) => {
       setLlmKeyId(keyId);
-      llmKeyIdRef.current = keyId;
-      setLlmKeyError(null);
 
       const key = llmCompatibleKeys.find((item) => item.id === keyId) ?? null;
       if (!key) {
-        setLlmApiKeyValue(null);
         return;
       }
 
@@ -249,22 +158,17 @@ export function AgentModal({
       ) {
         setModel(null);
       }
-
-      void fetchApiKeySecret(keyId, "llm");
     },
-    [fetchApiKeySecret, llmCompatibleKeys, model]
+    [llmCompatibleKeys, model]
   );
 
   const handleEmbeddingKeyChange = React.useCallback(
     (keyId: string) => {
       setEmbeddingKeyId(keyId);
-      embeddingKeyIdRef.current = keyId;
-      setEmbeddingKeyError(null);
 
       const key =
         embeddingCompatibleKeys.find((item) => item.id === keyId) ?? null;
       if (!key) {
-        setEmbeddingApiKeyValue(null);
         return;
       }
 
@@ -274,10 +178,8 @@ export function AgentModal({
           setEmbeddingModel(null);
         }
       }
-
-      void fetchApiKeySecret(keyId, "embedding");
     },
-    [embeddingCompatibleKeys, embeddingModel, fetchApiKeySecret]
+    [embeddingCompatibleKeys, embeddingModel]
   );
 
   React.useEffect(() => {
@@ -291,17 +193,18 @@ export function AgentModal({
     description: string,
     embeddingModel: string,
     model: LLM | null,
-    llmApiKey: string,
-    embeddingApiKey: string
+    llmApiKeyId: string,
+    embeddingApiKeyId: string
   ): Promise<AgentUIState | null> => {
     try {
+      // Stored keys are sent by id: the backend resolves them itself.
       return await agentsClient.createNewAgent(
         name,
         description,
         embeddingModel,
         model,
-        llmApiKey,
-        embeddingApiKey
+        llmApiKeyId,
+        embeddingApiKeyId
       );
     } catch (e) {
       alert("Failed to create a new agent: " + e);
@@ -313,20 +216,11 @@ export function AgentModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (loading || isFetchingLlmKey || isFetchingEmbeddingKey) return;
+    if (loading) return;
 
     if (!selectedLlmKey) {
       setValidationMessage(
         "Please select an API key for the language model before creating the agent."
-      );
-      setShowValidationAlert(true);
-      return;
-    }
-
-    if (!llmApiKeyValue) {
-      setValidationMessage(
-        llmKeyError ??
-          "The selected language-model API key could not be loaded. Try selecting it again."
       );
       setShowValidationAlert(true);
       return;
@@ -358,15 +252,6 @@ export function AgentModal({
       return;
     }
 
-    if (!embeddingApiKeyValue) {
-      setValidationMessage(
-        embeddingKeyError ??
-          "The selected embedding API key could not be loaded. Try selecting it again."
-      );
-      setShowValidationAlert(true);
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -375,8 +260,8 @@ export function AgentModal({
         description,
         embeddingModel,
         model,
-        llmApiKeyValue,
-        embeddingApiKeyValue
+        selectedLlmKey.id,
+        selectedEmbeddingKey.id
       );
       if (agent) {
         onCreate(agent);
@@ -448,14 +333,6 @@ export function AgentModal({
                 </SelectGroup>
               </SelectContent>
             </Select>
-            {isFetchingLlmKey && (
-              <p className="text-muted-foreground text-sm">
-                Loading API key secret...
-              </p>
-            )}
-            {llmKeyError && (
-              <p className="text-destructive text-sm">{llmKeyError}</p>
-            )}
             {!apiKeysLoading &&
               llmCompatibleKeys.length === 0 &&
               !apiKeysError && (
@@ -498,14 +375,6 @@ export function AgentModal({
                 </SelectGroup>
               </SelectContent>
             </Select>
-            {isFetchingEmbeddingKey && (
-              <p className="text-muted-foreground text-sm">
-                Loading API key secret...
-              </p>
-            )}
-            {embeddingKeyError && (
-              <p className="text-destructive text-sm">{embeddingKeyError}</p>
-            )}
             {!apiKeysLoading &&
               embeddingCompatibleKeys.length === 0 &&
               !apiKeysError && (
@@ -524,10 +393,8 @@ export function AgentModal({
                 selectedLlmKey ? [selectedLlmKey.provider] : undefined
               }
               provider={selectedLlmKey?.provider ?? null}
-              apiKey={llmApiKeyValue}
-              isApiKeyLoading={isFetchingLlmKey}
-              apiKeyError={llmKeyError}
-              disabled={!selectedLlmKey || isFetchingLlmKey}
+              apiKeyId={selectedLlmKey?.id ?? null}
+              disabled={!selectedLlmKey}
             />
             <p className="text-muted-foreground text-sm">
               The language model that will generate responses for this agent.
@@ -545,10 +412,8 @@ export function AgentModal({
                   : undefined
               }
               provider={selectedEmbeddingKey?.provider ?? null}
-              apiKey={embeddingApiKeyValue}
-              isApiKeyLoading={isFetchingEmbeddingKey}
-              apiKeyError={embeddingKeyError}
-              disabled={!selectedEmbeddingKey || isFetchingEmbeddingKey}
+              apiKeyId={selectedEmbeddingKey?.id ?? null}
+              disabled={!selectedEmbeddingKey}
             />
             <p className="text-muted-foreground text-sm">
               The embedding model is used to determine which documents from the
@@ -573,7 +438,7 @@ export function AgentModal({
               className={cn(
                 "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer rounded-md px-4 py-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               )}
-              disabled={loading || isFetchingLlmKey || isFetchingEmbeddingKey}
+              disabled={loading}
             >
               {loading ? "Creating..." : "Create"}
             </button>

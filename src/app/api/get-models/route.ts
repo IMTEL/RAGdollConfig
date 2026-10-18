@@ -15,30 +15,43 @@ export async function POST(req: NextRequest) {
     provider?: string;
     apiKey?: string;
     api_key?: string;
+    apiKeyId?: string;
   };
   const apiKey = payload?.apiKey ?? payload?.api_key;
+  const apiKeyId = payload?.apiKeyId;
 
-  if (!payload?.provider || !apiKey) {
+  if (!payload?.provider || (!apiKey && !apiKeyId)) {
     return NextResponse.json(
-      { error: "Missing required fields: provider and apiKey" },
+      { error: "Missing required fields: provider and apiKey or apiKeyId" },
       { status: 400 }
     );
   }
 
   try {
-    const upstream = await axios.post(
-      `${BACKEND_API_URL}/get_models`,
-      {
-        provider: payload.provider,
-        api_key: apiKey,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          Accept: "application/json",
-        },
-      }
-    );
+    // A stored key is resolved server-side: its secret never reaches us.
+    const upstream = apiKeyId
+      ? await axios.get(
+          `${BACKEND_API_URL}/models/llm/${encodeURIComponent(apiKeyId)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${sessionToken}`,
+              Accept: "application/json",
+            },
+          }
+        )
+      : await axios.post(
+          `${BACKEND_API_URL}/get_models`,
+          {
+            provider: payload.provider,
+            api_key: apiKey,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${sessionToken}`,
+              Accept: "application/json",
+            },
+          }
+        );
 
     return NextResponse.json(upstream.data, { status: upstream.status });
   } catch (error) {

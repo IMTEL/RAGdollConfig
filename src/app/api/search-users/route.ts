@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get("q") ?? "";
 
   try {
-    const upstream = await axios.get(`${BACKEND_API_URL}/users/search`, {
+    const upstream = await axios.get(`${BACKEND_API_URL}/agents/users/search`, {
       params: { q },
       headers: {
         Authorization: `Bearer ${sessionToken}`,
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
         status: error.response.status,
       });
     }
+    console.error("Failed to search users:", error);
     return NextResponse.json(
       { error: "Failed to search users" },
       { status: 500 }

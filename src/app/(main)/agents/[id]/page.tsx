@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { use, useCallback, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -183,23 +183,9 @@ export default function AgentConfigurationPage({
   const [apiKeys, setApiKeys] = useState<StoredApiKey[]>([]);
   const [apiKeysLoading, setApiKeysLoading] = useState(false);
   const [apiKeysError, setApiKeysError] = useState<string | null>(null);
-  const [llmKeyId, setLlmKeyId] = useState("");
-  const [embeddingKeyId, setEmbeddingKeyId] = useState("");
-  const [llmApiKeyValue, setLlmApiKeyValue] = useState<string | null>(null);
-  const [embeddingApiKeyValue, setEmbeddingApiKeyValue] = useState<
-    string | null
-  >(null);
-  const [llmKeyError, setLlmKeyError] = useState<string | null>(null);
-  const [embeddingKeyError, setEmbeddingKeyError] = useState<string | null>(
-    null
-  );
   const [collapsedFunctionIds, setCollapsedFunctionIds] = useState<Set<string>>(
     new Set()
   );
-  const [isFetchingLlmKey, setIsFetchingLlmKey] = useState(false);
-  const [isFetchingEmbeddingKey, setIsFetchingEmbeddingKey] = useState(false);
-  const llmKeyIdRef = useRef("");
-  const embeddingKeyIdRef = useRef("");
 
   useEffect(() => {
     let cancelled = false;
@@ -247,6 +233,13 @@ export default function AgentConfigurationPage({
     () => apiKeys.filter((key) => key.usage !== "llm"),
     [apiKeys]
   );
+
+  // The stored key the agent references, if it is one of this user's keys
+  // (a collaborator cannot see the owner's keys). A pasted key overrides it.
+  const llmKeyId = agent.llmApiKey ? "" : (agent.llmApiKeyId ?? "");
+  const embeddingKeyId = agent.embeddingApiKey
+    ? ""
+    : (agent.embeddingApiKeyId ?? "");
 
   const selectedLlmKey = useMemo(
     () => llmCompatibleKeys.find((key) => key.id === llmKeyId) ?? null,
@@ -408,126 +401,58 @@ export default function AgentConfigurationPage({
     });
   };
 
-  const fetchApiKeySecret = useCallback(
-    async (keyId: string, target: "llm" | "embedding") => {
-      if (!keyId) return;
-
-      const isLlm = target === "llm";
-      if (isLlm) {
-        setIsFetchingLlmKey(true);
-        setLlmKeyError(null);
-        setLlmApiKeyValue(null);
-      } else {
-        setIsFetchingEmbeddingKey(true);
-        setEmbeddingKeyError(null);
-        setEmbeddingApiKeyValue(null);
-      }
-
-      try {
-        const response = await fetch(`/api/get-api-keys/${keyId}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch API key (${response.status})`);
-        }
-        const text = await response.text();
-        if (!text) {
-          throw new Error("Empty response from server");
-        }
-        const data = JSON.parse(text);
-        const rawKey = data?.raw_key as string | undefined;
-        if (!rawKey) {
-          throw new Error("API key secret missing in response");
-        }
-
-        const isCurrentSelection = isLlm
-          ? llmKeyIdRef.current === keyId
-          : embeddingKeyIdRef.current === keyId;
-        if (!isCurrentSelection) return;
-
-        registerUpdate();
-        if (isLlm) {
-          setLlmApiKeyValue(rawKey);
-          setAgent(agent.id, (prev) => ({ ...prev, llmApiKey: rawKey }));
-        } else {
-          setEmbeddingApiKeyValue(rawKey);
-          setAgent(agent.id, (prev) => ({
-            ...prev,
-            embeddingApiKey: rawKey,
-          }));
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to load API key";
-        if (isLlm) {
-          setLlmKeyError(message);
-        } else {
-          setEmbeddingKeyError(message);
-        }
-      } finally {
-        if (isLlm) {
-          setIsFetchingLlmKey(false);
-        } else {
-          setIsFetchingEmbeddingKey(false);
-        }
-      }
-    },
-    [agent.id, registerUpdate, setAgent]
-  );
-
   const handleLlmKeyChange = useCallback(
     (keyId: string) => {
-      setLlmKeyId(keyId);
-      llmKeyIdRef.current = keyId;
-      setLlmKeyError(null);
-
       const key = llmCompatibleKeys.find((item) => item.id === keyId) ?? null;
-      if (!key) {
-        setLlmApiKeyValue(null);
-        return;
-      }
+      if (!key) return;
+
+      // Sent as llm_api_key_id on save; the backend resolves the secret.
+      registerUpdate();
+      setAgent(agent.id, (prev) => ({
+        ...prev,
+        llmApiKeyId: key.id,
+        llmApiKey: null,
+        llmApiKeyInvalid: false,
+      }));
 
       if (
         agent.model?.provider &&
         agent.model.provider.toLowerCase() !== key.provider.toLowerCase()
       ) {
-        registerUpdate();
         setAgent(agent.id, (prev) => ({ ...prev, model: null }));
       }
-
-      void fetchApiKeySecret(keyId, "llm");
     },
-    [agent.id, agent.model, fetchApiKeySecret, llmCompatibleKeys, registerUpdate, setAgent]
+    [agent.id, agent.model, llmCompatibleKeys, registerUpdate, setAgent]
   );
 
   const handleEmbeddingKeyChange = useCallback(
     (keyId: string) => {
-      setEmbeddingKeyId(keyId);
-      embeddingKeyIdRef.current = keyId;
-      setEmbeddingKeyError(null);
-
       const key =
         embeddingCompatibleKeys.find((item) => item.id === keyId) ?? null;
-      if (!key) {
-        setEmbeddingApiKeyValue(null);
-        return;
-      }
+      if (!key) return;
+
+      // Sent as embedding_api_key_id on save; the backend resolves the secret.
+      registerUpdate();
+      setAgent(agent.id, (prev) => ({
+        ...prev,
+        embeddingApiKeyId: key.id,
+        embeddingApiKey: null,
+        embeddingApiKeyInvalid: false,
+      }));
 
       if (agent.embeddingModel) {
         const currentProvider = agent.embeddingModel
           .split(":", 1)[0]
           ?.toLowerCase();
         if (currentProvider !== key.provider.toLowerCase()) {
-          registerUpdate();
           setAgent(agent.id, (prev) => ({ ...prev, embeddingModel: "" }));
         }
       }
-
-      void fetchApiKeySecret(keyId, "embedding");
     },
     [
       agent.embeddingModel,
       agent.id,
       embeddingCompatibleKeys,
-      fetchApiKeySecret,
       registerUpdate,
       setAgent,
     ]
@@ -971,14 +896,19 @@ export default function AgentConfigurationPage({
 
   const handleSave = () => {
     // TODO: Implement save functionality
-    agentsClient.updateAgent(agent).then((newAgent) => {
-      setAgent(agent.id, (_) => newAgent);
-      if (newAgent.databaseId !== agent.databaseId) {
-        router.replace(`/agents/${newAgent.databaseId}`);
-      }
-    });
-    // Temporary alert for demonstration
-    alert("Agent configuration saved!");
+    agentsClient
+      .updateAgent(agent)
+      .then((newAgent) => {
+        setAgent(agent.id, (_) => newAgent);
+        if (newAgent.databaseId !== agent.databaseId) {
+          router.replace(`/agents/${newAgent.databaseId}`);
+        }
+        alert("Agent configuration saved!");
+      })
+      .catch((error) => {
+        console.error("Failed to save agent:", error);
+        alert(error instanceof Error ? error.message : "Failed to save agent");
+      });
   };
 
   const handleTestAgent = () => {
@@ -1012,10 +942,80 @@ export default function AgentConfigurationPage({
   const currentEmbeddingProvider =
     agent.embeddingModel?.split(":", 1)[0]?.toLowerCase() || null;
   const modelProvider = selectedLlmKey?.provider ?? agent.model?.provider ?? null;
-  const modelApiKey = llmApiKeyValue ?? agent.llmApiKey;
+  // Models are listed with the pasted key, or with the selected stored key by
+  // id. A key only stored on the agent cannot be used: it is never sent back.
+  const modelApiKey = agent.llmApiKey?.trim() || null;
+  const modelApiKeyId = modelApiKey ? null : (selectedLlmKey?.id ?? null);
   const embeddingProvider =
     selectedEmbeddingKey?.provider ?? currentEmbeddingProvider;
-  const embeddingApiKey = embeddingApiKeyValue ?? agent.embeddingApiKey;
+  const embeddingApiKey = agent.embeddingApiKey?.trim() || null;
+  const embeddingApiKeyId = embeddingApiKey
+    ? null
+    : (selectedEmbeddingKey?.id ?? null);
+
+  const handlePastedKeyChange = (
+    target: "llm" | "embedding",
+    value: string
+  ) => {
+    registerUpdate();
+    setAgent(agent.id, (prev) =>
+      target === "llm"
+        ? { ...prev, llmApiKey: value || null, llmApiKeyInvalid: false }
+        : {
+            ...prev,
+            embeddingApiKey: value || null,
+            embeddingApiKeyInvalid: false,
+          }
+    );
+  };
+
+  const renderStoredKeyState = (target: "llm" | "embedding") => {
+    const isLlm = target === "llm";
+    const invalid = isLlm
+      ? agent.llmApiKeyInvalid
+      : agent.embeddingApiKeyInvalid;
+    const hasKey = isLlm ? agent.hasLlmApiKey : agent.hasEmbeddingApiKey;
+    const pasted = isLlm ? modelApiKey : embeddingApiKey;
+    const selected = isLlm ? selectedLlmKey : selectedEmbeddingKey;
+    const referencedId = isLlm ? agent.llmApiKeyId : agent.embeddingApiKeyId;
+
+    if (invalid) {
+      return (
+        <p className="text-destructive text-sm">
+          The stored key can&apos;t be read. Re-enter it or pick another key.
+        </p>
+      );
+    }
+    if (pasted) {
+      return (
+        <p className="text-muted-foreground text-sm">
+          The pasted key replaces the stored key when you save.
+        </p>
+      );
+    }
+    if (selected) return null;
+    if (referencedId) {
+      return (
+        <p className="text-muted-foreground text-sm">
+          Uses one of the agent owner&apos;s stored keys. Pick a key or paste
+          one to change it.
+        </p>
+      );
+    }
+    if (hasKey) {
+      return (
+        <p className="text-muted-foreground text-sm">
+          A key is stored for this agent and is kept when you save. Pick a
+          stored key or paste one to change it or to list models.
+        </p>
+      );
+    }
+    return (
+      <p className="text-muted-foreground text-sm">
+        No key is stored for this agent.
+      </p>
+    );
+  };
 
   // Determine temperature max based on model provider
   const tempMax = agent.model?.provider?.toLowerCase() === "idun" ? 2 : 1;
@@ -1934,14 +1934,17 @@ export default function AgentConfigurationPage({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  {isFetchingLlmKey && (
-                    <p className="text-muted-foreground text-sm">
-                      Loading API key secret...
-                    </p>
-                  )}
-                  {llmKeyError && (
-                    <p className="text-destructive text-sm">{llmKeyError}</p>
-                  )}
+                  <Input
+                    id="llm-api-key-paste"
+                    type="password"
+                    autoComplete="off"
+                    placeholder="Or paste a new key for the current provider"
+                    value={agent.llmApiKey ?? ""}
+                    onChange={(e) =>
+                      handlePastedKeyChange("llm", e.target.value)
+                    }
+                  />
+                  {renderStoredKeyState("llm")}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="model">Model</Label>
@@ -1960,9 +1963,8 @@ export default function AgentConfigurationPage({
                     }
                     provider={modelProvider}
                     apiKey={modelApiKey}
-                    isApiKeyLoading={isFetchingLlmKey}
-                    apiKeyError={llmKeyError}
-                    disabled={isFetchingLlmKey || !modelApiKey}
+                    apiKeyId={modelApiKeyId}
+                    disabled={!modelApiKey && !modelApiKeyId}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -1996,16 +1998,17 @@ export default function AgentConfigurationPage({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  {isFetchingEmbeddingKey && (
-                    <p className="text-muted-foreground text-sm">
-                      Loading API key secret...
-                    </p>
-                  )}
-                  {embeddingKeyError && (
-                    <p className="text-destructive text-sm">
-                      {embeddingKeyError}
-                    </p>
-                  )}
+                  <Input
+                    id="embedding-api-key-paste"
+                    type="password"
+                    autoComplete="off"
+                    placeholder="Or paste a new key for the current provider"
+                    value={agent.embeddingApiKey ?? ""}
+                    onChange={(e) =>
+                      handlePastedKeyChange("embedding", e.target.value)
+                    }
+                  />
+                  {renderStoredKeyState("embedding")}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="embedding-model">Embedding Model</Label>
@@ -2027,9 +2030,8 @@ export default function AgentConfigurationPage({
                     }
                     provider={embeddingProvider}
                     apiKey={embeddingApiKey}
-                    isApiKeyLoading={isFetchingEmbeddingKey}
-                    apiKeyError={embeddingKeyError}
-                    disabled={isFetchingEmbeddingKey || !embeddingApiKey}
+                    apiKeyId={embeddingApiKeyId}
+                    disabled={!embeddingApiKey && !embeddingApiKeyId}
                   />
                 </div>
                 <div className="grid gap-2">
